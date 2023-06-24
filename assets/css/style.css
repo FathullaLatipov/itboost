@@ -257,10 +257,12 @@ h6 {
   background-color: #48abfe;
 }
 
-.navbar .dropdown:hover>ul {
-  opacity: 1;
-  top: 100%;
-  visibility: visible;
+@media (min-width: 768px)  {
+  .navbar .dropdown:hover>ul {
+    opacity: 1;
+    top: 100%;
+    visibility: visible;
+  }
 }
 
 .navbar .dropdown .dropdown ul {
@@ -269,12 +271,13 @@ h6 {
   visibility: hidden;
 }
 
-.navbar .dropdown .dropdown:hover>ul {
-  opacity: 1;
-  top: 0;
-  left: 100%;
-  visibility: visible;
-}
+
+  .navbar .dropdown .dropdown:hover>ul {
+    opacity: 1;
+    top: 0;
+    left: 100%;
+    visibility: visible;
+  }
 
 @media (max-width: 1366px) {
   .navbar .dropdown .dropdown ul {
@@ -1677,4 +1680,15 @@ section {
   text-align: center;
   font-size: 13px;
   color: #fff;
+}
+
+
+.visible {
+  opacity: 1 !important;
+  top: 100% !important;
+  visibility: visible !important;
+}
+
+.hidden {
+  visibility: hidden !important;
 }
