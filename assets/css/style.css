@@ -1274,6 +1274,7 @@ section {
 .team .member .member-img {
   position: relative;
   overflow: hidden;
+  margin-left: 13%;
 }
 
 .team .member .social {
