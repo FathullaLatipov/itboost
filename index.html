@@ -694,24 +694,33 @@
             <form id="my-form" method="post" role="form" class="php-email-form">
               <div class="row">
                 <div class="col-md-6 form-group">
-                  <input type="text" name="name" class="form-control" id="name" placeholder="Your Name" required>
+                  <input type="text" name="name" class="form-control" id="name" data-translate="namePlaceholder" required>
                 </div>
                 <div class="col-md-6 form-group mt-3 mt-md-0">
-                  <input type="email" class="form-control" name="email" id="email" placeholder="Your Email" required>
+                  <input type="number" class="form-control" name="phone" id="phone" data-translate="phonePlaceholder" required>
                 </div>
               </div>
               <div class="form-group mt-3">
-                <input type="text" class="form-control" name="subject" id="subject" placeholder="Subject" required>
+                <select class="form-control" name="subject" id="subject" required>
+                  <!-- Выберите услугу -->
+                  <option value="" data-translate="Choiceus"></option>
+                  <option value="Создание сайта" data-translate="CRW"></option>
+                  <option value="Создание Создание телеграм бота" data-translate="CTG"></option>
+                  <option value="Создание интернет-магазина" data-translate="CIM"></option>
+                  <option value="Создание Создание платформы" data-translate="CP"></option>
+                  <option value="Создание Услуга DevOps" data-translate="UDO"> </option>
+                  <option value="Создание Создание IOS-Android" data-translate="CIA"></option>
+                </select>
               </div>
               <div class="form-group mt-3">
-                <textarea class="form-control" name="message" rows="5" placeholder="Message" required></textarea>
+                <textarea class="form-control" name="message" id="message" rows="5" data-translate="messagePlaceholder" value="" required></textarea>
               </div>
               <div class="my-3">
-                <div class="loading">Loading</div>
-                <div class="error-message"></div>
-                <div class="sent-message">Your message has been sent. Thank you!</div>
+                <div class="loading">Загрузка</div>
+                <div class="error-message">error</div>
+                <div class="sent-message" data-translate="suc"></div>
               </div>
-              <div class="text-center"><button type="submit">Send Message</button></div>
+              <div class="text-center"><button type="submit" data-translate="send"></button></div>
             </form>
 
           </div>
@@ -791,8 +800,47 @@
   <script src="assets/vendor/glightbox/js/glightbox.min.js"></script>
   <script src="assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
   <script src="assets/vendor/swiper/swiper-bundle.min.js"></script>
-  <script src="assets/vendor/php-email-form/validate.js"></script>
+  <script>
+    // Получение формы по ее идентификатору
+  const form = document.getElementById('my-form');
 
+// Функция для отправки формы на бота
+function submitForm() {
+  const name = document.getElementById('name').value;
+  const phone = document.getElementById('phone').value;
+  const subject = document.getElementById('subject').value;
+  const message = document.getElementById('message').value;
+  const token = '5995842244:AAH4a2mU1z3IVt_bdd8YLLZ2w3Jq6i-XuF8';
+
+  // Формирование URL для отправки запроса на бота
+  const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=575148251&text=${encodeURIComponent('Имя: ' + name + '\nНомер телефона: ' + phone + '\nУслуга: ' + subject + '\nСообщение: ' + message)}`;
+
+  // Отправка запроса на бота
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.ok) {
+        // Очистка полей формы после успешной отправки
+        form.reset();
+        // Отображение сообщения об успешной отправке
+        document.querySelector('.sent-message').style.display = 'block';
+      } else {
+        // Отображение сообщения об ошибке при отправке
+        document.querySelector('.error-message').style.display = 'block';
+      }
+    })
+    .catch(error => {
+      // Отображение сообщения об ошибке при отправке
+      document.querySelector('.error-message').style.display = 'block';
+    });
+}
+
+// Обработка события отправки формы
+form.addEventListener('submit', function (event) {
+  event.preventDefault(); // Отмена стандартного действия отправки формы
+  submitForm(); // Вызов функции отправки формы на бота
+});
+  </script>
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
   <script src="translations_ru.js"></script>

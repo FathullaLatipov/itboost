@@ -323,6 +323,7 @@ function applyTranslations() {
   elements.forEach(function(element) {
     var translationKey = element.getAttribute('data-translate');
     element.textContent = translations[translationKey];
+    element.placeholder = translations[translationKey];
   });
 }
 
