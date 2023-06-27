@@ -651,7 +651,7 @@ section {
 .services .icon-box {
   text-align: center;
   border: 1px solid #ebebeb;
-  padding: 80px 20px;
+  padding: 30px 20px;
   transition: all ease-in-out 0.3s;
   background: #fff;
 }
@@ -772,6 +772,43 @@ section {
 }
 
 .cta2 .cta2-btn:hover {
+  background: #48abfe;
+  border-color: #48abfe;
+  color: #151515;
+}
+
+
+.cta3 {
+  /* background: linear-gradient(rgba(2, 2, 2, 0.5), rgba(0, 0, 0, 0.5)), url("../img/cta-bg.jpg") fixed center center; */
+  background-size: cover;
+  padding: 20px 0;
+}
+
+.cta3 h3 {
+  color: #000;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.cta3 p {
+  color: #000;
+}
+
+.cta3 .cta3-btn {
+  font-family: "Raleway", sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 1px;
+  display: inline-block;
+  padding: 8px 28px;
+  border-radius: 4px;
+  transition: 0.5s;
+  margin-top: 10px;
+  border: 2px solid #48abfe;
+  color: #48abfe;
+}
+
+.cta3 .cta3-btn:hover {
   background: #48abfe;
   border-color: #48abfe;
   color: #151515;
@@ -1465,7 +1502,7 @@ section {
 }
 
 .contact .php-email-form button[type=submit]:hover {
-  background: #ffcd6b;
+  color: #fff;
 }
 
 @keyframes animate-loading {
