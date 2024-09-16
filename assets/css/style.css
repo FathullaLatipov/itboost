@@ -1311,7 +1311,20 @@ section {
 .team .member .member-img {
   position: relative;
   overflow: hidden;
-  margin-left: 13%;
+  /* margin-left: 13%; */
+}
+
+@media (max-width:700px) {
+  .team .member .member-img .img-fluid{
+    height: auto;
+    width: auto;
+  }
+}
+@media (min-width:750px) {
+.team .member .member-img .img-fluid{
+  height: 335px;
+  width: 280px;
+}
 }
 
 .team .member .social {
