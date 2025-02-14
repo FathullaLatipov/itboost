@@ -61,7 +61,7 @@ var translations = {
   gem:"Onlayn do'kon",
   bmp:"Ko'p sahifali sayt",
   chm:"Muloqot uchun chat",
-  o5a:"Ko'p sahifali sayt",
+  o5a:"Bir sahifali sayt",
   plla:"Telegram bot",
   iba: "Mobil ilova",
   f2: "Telegram bot",
