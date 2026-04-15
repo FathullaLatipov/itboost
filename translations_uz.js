@@ -64,6 +64,7 @@ var translations = {
   bmi:"И другие сотрудники",
   chm:"Muloqot uchun chat",
   o5a:"Bir sahifali sayt",
+  dvlanding:"Reklama uchun bir sahifali sayt",
   plla:"Telegram bot",
   iba: "Mobil ilova",
   f2: "Telegram bot",

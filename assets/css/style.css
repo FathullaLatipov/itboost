@@ -115,6 +115,10 @@ body {
   }
 }
 
+body.mobile-menu-open {
+  overflow: hidden;
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -196,26 +200,6 @@ body {
 
 .mobile-nav-toggle:hover {
   color: var(--primary-color);
-}
-
-@media (max-width: 991px) {
-  .mobile-nav-toggle {
-    display: block;
-  }
-  .navbar ul {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--glass-bg);
-    flex-direction: column;
-    padding: 1rem;
-    gap: 1rem;
-  }
-  .navbar ul.show {
-    display: flex;
-  }
 }
 
 /* Hero */
@@ -394,6 +378,12 @@ body {
 /* Sections */
 section {
   padding: 100px 0;
+}
+
+/* Improves initial render performance on long pages */
+main > section {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 700px;
 }
 
 .section-bg {

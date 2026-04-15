@@ -108,54 +108,23 @@
   }
 
   /**
-   * Mobile nav toggle
-   */
-  on('click', '.mobile-nav-toggle', function(e) {
-    select('#navbar').classList.toggle('navbar-mobile')
-    this.classList.toggle('bi-list')
-    this.classList.toggle('bi-x')
-  })
-
-  /**
-   * Mobile nav dropdowns activate
-   */
-
-  window.addEventListener('resize', function() {
-    if (window.innerWidth <= 768) {
-      on('click', '.navbar .dropdown > a', function(e) {
-        // if (select('#navbar').classList.contains('navbar-mobile')) {
-        //   e.preventDefault()
-        //   this.nextElementSibling.classList.toggle('dropdown-active')
-        // }
-        const style = window.getComputedStyle(this.nextElementSibling);
-        const isHidden = style.getPropertyValue('visibility') === 'hidden';
-        if (!isHidden) {
-          this.nextElementSibling.classList.remove('visible');
-          this.nextElementSibling.classList.add('hidden');
-          this.style.color = '#ffffff';
-        } else {
-          this.nextElementSibling.classList.remove('hidden');
-          this.nextElementSibling.classList.add('visible');
-          this.style.color = '#48abfe;'; 
-        }
-      }, true)
-    }
-  })
-  
-
-  /**
    * Scrool with ofset on links with a class name .scrollto
    */
   on('click', '.scrollto', function(e) {
     if (select(this.hash)) {
       e.preventDefault()
 
-      let navbar = select('#navbar')
-      if (navbar.classList.contains('navbar-mobile')) {
-        navbar.classList.remove('navbar-mobile')
+      const mobileNavList = select('#navbar ul')
+      if (mobileNavList && mobileNavList.classList.contains('show')) {
+        mobileNavList.classList.remove('show')
+        document.body.classList.remove('mobile-menu-open')
         let navbarToggle = select('.mobile-nav-toggle')
-        navbarToggle.classList.toggle('bi-list')
-        navbarToggle.classList.toggle('bi-x')
+        if (navbarToggle) {
+          navbarToggle.classList.add('bi-list')
+          navbarToggle.classList.remove('bi-x')
+          navbarToggle.setAttribute('aria-expanded', 'false')
+          navbarToggle.setAttribute('aria-label', 'Открыть меню')
+        }
       }
       scrollto(this.hash)
     }
@@ -181,42 +150,6 @@
       preloader.remove()
     });
   }
-
-  /**
-   * Clients Slider
-   */
-  new Swiper('.clients-slider', {
-    speed: 400,
-    loop: true,
-    autoplay: {
-      delay: 5000,
-      disableOnInteraction: false
-    },
-    slidesPerView: 'auto',
-    pagination: {
-      el: '.swiper-pagination',
-      type: 'bullets',
-      clickable: true
-    },
-    breakpoints: {
-      320: {
-        slidesPerView: 2,
-        spaceBetween: 40
-      },
-      480: {
-        slidesPerView: 3,
-        spaceBetween: 60
-      },
-      640: {
-        slidesPerView: 4,
-        spaceBetween: 80
-      },
-      992: {
-        slidesPerView: 6,
-        spaceBetween: 120
-      }
-    }
-  });
 
   /**
    * Porfolio isotope and filter
@@ -256,41 +189,6 @@
   });
 
   /**
-   * Portfolio details slider
-   */
-  new Swiper('.portfolio-details-slider', {
-    speed: 400,
-    loop: true,
-    autoplay: {
-      delay: 5000,
-      disableOnInteraction: false
-    },
-    pagination: {
-      el: '.swiper-pagination',
-      type: 'bullets',
-      clickable: true
-    }
-  });
-
-  /**
-   * Testimonials slider
-   */
-  new Swiper('.testimonials-slider', {
-    speed: 600,
-    loop: true,
-    autoplay: {
-      delay: 5000,
-      disableOnInteraction: false
-    },
-    slidesPerView: 'auto',
-    pagination: {
-      el: '.swiper-pagination',
-      type: 'bullets',
-      clickable: true
-    }
-  });
-
-  /**
    * Animation on scroll
    */
   window.addEventListener('load', () => {
@@ -301,11 +199,6 @@
       mirror: false
     });
   });
-
-  /**
-   * Initiate Pure Counter 
-   */
-  new PureCounter();
 
 })()
 
