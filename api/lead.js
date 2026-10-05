@@ -13,7 +13,7 @@
  * Request  (application/json): { name, phone, service, message, lang, page, company }
  * Response (application/json): { ok: true } | { ok: false, error: "<code>" }
  *   400 invalid_json / invalid_field   403 forbidden_origin   405 method_not_allowed
- *   413 payload_too_large   415 unsupported_media_type   429 rate_limited
+ *   408 body_timeout   413 payload_too_large   415 unsupported_media_type   429 rate_limited
  *   500 not_configured   502 upstream_failed
  */
 
@@ -31,7 +31,8 @@ const ALLOWED_SERVICES = [
 const MAX_BODY_BYTES = 16_384;
 const RATE_LIMIT_MAX = 5; // requests …
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // … per 10 minutes per IP (best effort: per instance)
-const UPSTREAM_TIMEOUT_MS = 10_000;
+const UPSTREAM_TIMEOUT_MS = 8_000;
+const BODY_TIMEOUT_MS = 3_000;
 
 /** @type {Map<string, number[]>} */
 const hits = new Map();
@@ -87,28 +88,83 @@ function rateLimitOk(ip) {
 }
 
 /**
- * Body as a parsed object. Vercel's Node helpers usually pre-parse JSON into `req.body`;
- * otherwise read the raw stream (with a size cap).
+ * Reads the raw request stream with a size cap and a hard timeout — it must never hang, even if
+ * the platform has already consumed the stream.
+ * @returns {Promise<{ ok: true, raw: string } | { ok: false, status: number, error: string }>}
+ */
+function readStream(req) {
+  return new Promise((resolve) => {
+    if (req.readableEnded || req.destroyed) {
+      resolve({ ok: false, status: 400, error: 'invalid_json' });
+      return;
+    }
+    /** @type {Buffer[]} */
+    const chunks = [];
+    let size = 0;
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      req.off('data', onData);
+      req.off('end', onEnd);
+      req.off('error', onError);
+      resolve(result);
+    };
+    const onData = (chunk) => {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      size += buf.length;
+      if (size > MAX_BODY_BYTES) finish({ ok: false, status: 413, error: 'payload_too_large' });
+      else chunks.push(buf);
+    };
+    const onEnd = () => finish({ ok: true, raw: Buffer.concat(chunks).toString('utf8') });
+    const onError = () => finish({ ok: false, status: 400, error: 'invalid_json' });
+    const timer = setTimeout(() => {
+      console.error('[itboost-lead] request body stream did not finish in time');
+      finish({ ok: false, status: 408, error: 'body_timeout' });
+    }, BODY_TIMEOUT_MS);
+    req.on('data', onData);
+    req.on('end', onEnd);
+    req.on('error', onError);
+  });
+}
+
+/**
+ * Body as a parsed object. Vercel's Node helpers expose the already-buffered body as `req.body`
+ * (parsed for JSON); without helpers we fall back to reading the stream.
  * @returns {Promise<{ ok: true, data: unknown } | { ok: false, status: number, error: string }>}
  */
 async function readBody(req) {
   /** @type {unknown} */
-  const pre = /** @type {{ body?: unknown }} */ (req).body;
-  if (pre !== undefined && pre !== null && typeof pre !== 'string' && !Buffer.isBuffer(pre)) {
+  let pre;
+  try {
+    // The helper getter throws on malformed JSON.
+    pre = /** @type {{ body?: unknown }} */ (req).body;
+  } catch {
+    return { ok: false, status: 400, error: 'invalid_json' };
+  }
+  // Some runtimes expose a lazily parsed body as a promise.
+  if (pre !== null && typeof pre === 'object' && typeof (/** @type {{ then?: unknown }} */ (pre).then) === 'function') {
+    try {
+      pre = await /** @type {Promise<unknown>} */ (pre);
+    } catch {
+      return { ok: false, status: 400, error: 'invalid_json' };
+    }
+  }
+  if (pre !== undefined && pre !== null && typeof pre === 'object' && !Buffer.isBuffer(pre)) {
     return { ok: true, data: pre };
   }
-  let raw = '';
+
+  let raw;
   if (typeof pre === 'string') raw = pre;
   else if (Buffer.isBuffer(pre)) raw = pre.toString('utf8');
   else {
-    const chunks = [];
-    let size = 0;
-    for await (const chunk of req) {
-      size += chunk.length;
-      if (size > MAX_BODY_BYTES) return { ok: false, status: 413, error: 'payload_too_large' };
-      chunks.push(chunk);
+    const streamed = await readStream(req);
+    if (!streamed.ok) {
+      console.error(`[itboost-lead] could not read body (${streamed.error}); req.body type: ${pre === null ? 'null' : typeof pre}`);
+      return streamed;
     }
-    raw = Buffer.concat(chunks).toString('utf8');
+    raw = streamed.raw;
   }
   if (Buffer.byteLength(raw) > MAX_BODY_BYTES) return { ok: false, status: 413, error: 'payload_too_large' };
   try {
@@ -232,5 +288,6 @@ export default async function handler(req, res) {
   if (!(await sendToTelegram(token, chatId, text))) {
     return respond(res, 502, { ok: false, error: 'upstream_failed' });
   }
+  console.log('[itboost-lead] lead delivered to Telegram');
   return respond(res, 200, { ok: true });
 }
