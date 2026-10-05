@@ -13,17 +13,16 @@ through the Vercel Function `api/lead.js` (`POST /api/lead`), so the bot token s
 
 1. vercel.com → *Add New → Project* → import `FathullaLatipov/itboost` (production branch:
    `master`). Framework preset: Astro (detected automatically).
-2. *Settings → Environment Variables* (Production + Preview):
+2. *Settings → Environment Variables* (Production + Preview) — exactly two, both server-only:
 
    | Name | Value | Notes |
    |---|---|---|
-   | `PUBLIC_LEAD_MODE` | `proxy` | public on purpose — only switches the form to `/api/lead` |
-   | `ITBOOST_TG_TOKEN` | bot token | **no** `PUBLIC_` prefix · mark as *Sensitive* |
-   | `ITBOOST_TG_CHAT_ID` | chat id | no `PUBLIC_` prefix |
+   | `TG_BOT_TOKEN` | bot token | mark as *Sensitive* |
+   | `TG_CHAT_ID` | chat id | |
 
-   Do **not** create `PUBLIC_TG_BOT_TOKEN` / `PUBLIC_TG_CHAT_ID` on Vercel — the `PUBLIC_` prefix
-   would ship the token to every visitor (Vercel warns about exactly this). Changing variables
-   requires a redeploy (*Deployments → … → Redeploy*).
+   Nothing with a `PUBLIC_` prefix is needed — delete any `PUBLIC_*` variables left from earlier
+   setups (`PUBLIC_*` values are bundled into the browser JS; Vercel warns about exactly this).
+   Changing variables requires a redeploy (*Deployments → … → Redeploy*).
 3. Check the function after deploy: `curl -i https://<your-domain>/api/lead` → `405
    {"ok":false,"error":"method_not_allowed"}` (not 404). Then send one real lead from the site.
    Errors are in *Project → Logs* (`[itboost-lead] …`).
@@ -35,26 +34,28 @@ through the Vercel Function `api/lead.js` (`POST /api/lead`), so the bot token s
 
 ---
 
-## 1. Environment (`.env`)
+## 1. Environment
 
-The lead form's transport is configured at **build time**. Copy `.env.example` to `.env`
-(gitignored) and fill it in:
+The site itself needs **no** environment variables: the form always posts to `/api/lead`, a
+server-side proxy that forwards leads to Telegram. Only that proxy needs two server-side values
+(see `.env.example`):
 
-| Variable | Mode | Meaning |
-|---|---|---|
-| `PUBLIC_LEAD_MODE` | both | `proxy` (recommended) — browser posts to `/api/lead` · `telegram` (default if unset; dev only) — browser posts straight to Telegram |
-| `PUBLIC_TG_BOT_TOKEN` | telegram | Bot token. **Ends up in the public JS bundle.** |
-| `PUBLIC_TG_CHAT_ID` | telegram | Chat that receives leads |
-| `PUBLIC_LEAD_ENDPOINT` | proxy | Optional, defaults to `/api/lead` (Vercel Function, or the cPanel rewrite to `lead.php`) |
+| Variable | Meaning |
+|---|---|
+| `TG_BOT_TOKEN` | Bot token (aliases: `ITBOOST_TG_TOKEN`) |
+| `TG_CHAT_ID` | Chat that receives leads (alias: `ITBOOST_TG_CHAT_ID`) |
 
-`PUBLIC_*` values are inlined into the client JavaScript — treat everything in `.env` as public.
-If the transport is not configured, the form shows the error state and logs
-`[lead] config: …` in the browser console (it never fails silently).
+- Vercel: project environment variables (section 0).
+- cPanel: PHP environment variables or `~/itboost-lead-config.php` (section 4).
+- Locally, `astro dev` cannot run `/api/lead`, so the form shows its error state; test sending on
+  a Vercel preview deployment (or `vercel dev`, which reads `.env`).
 
-> **Security status.** The bot token in use today was published in the legacy site's
-> `index.html` (and remains in git history). It must be considered compromised. Telegram mode
-> only exists to keep leads flowing until the token is rotated — follow section 4 as soon as
-> possible.
+If the proxy is not configured it answers `500 not_configured` and logs
+`[itboost-lead] not configured…`; the form shows its error state (it never fails silently).
+
+> **Security status.** The bot token used by the legacy site was published in its `index.html`
+> (and remains in git history). It must be considered compromised — rotate it (section 4, step 1)
+> and put only the new token into `TG_BOT_TOKEN`.
 
 ## 2. Build
 
@@ -70,11 +71,10 @@ npm run preview      # optional local check of dist/ at http://localhost:4321
 `sitemap-index.xml` + `sitemap-0.xml`, `robots.txt`, `.htaccess`, icons, `og-image.png`,
 `site.webmanifest`, and `api/lead.php`.
 
-Before uploading, make sure the build used the intended mode — look for anything shaped like a
-Telegram bot token in the bundle:
+Sanity check — the bundle must never contain anything shaped like a bot token:
 
 ```bash
-grep -rlE "[0-9]{8,10}:[A-Za-z0-9_-]{30,}" dist/   # telegram mode: 1 file · proxy mode: no output
+grep -rlE "[0-9]{8,10}:[A-Za-z0-9_-]{30,}" dist/   # must print nothing
 ```
 
 ## 3. Upload to cPanel
@@ -104,16 +104,16 @@ request to Apache — for those files the `.htaccess` headers/caching do not app
 own defaults are used. HTML, redirects, the 404 page and PHP still go through Apache. If you
 need the headers on every response, configure them in Engintron's `custom_rules` instead.
 A Content-Security-Policy is intentionally not set yet; add one only after testing (the lead
-form needs `connect-src https://api.telegram.org` in telegram mode).
+form only talks to its own origin: `connect-src 'self'`).
 
-## 4. Token rotation + switch to the proxy (recommended)
+## 4. Token rotation + proxy on cPanel
 
-The proxy (`public/api/lead.php`, reached at `https://itboost.uz/api/lead` via the `.htaccess` rewrite) keeps the token on the
-server and adds an origin check, validation, a honeypot and a rate limit (5 leads / 10 min / IP).
+On cPanel the form posts to `https://itboost.uz/api/lead`, which `.htaccess` rewrites to
+`public/api/lead.php`. The script keeps the token on the server and adds an origin check,
+validation, a honeypot and a rate limit (5 leads / 10 min / IP).
 
 1. **Revoke the leaked token.** Telegram → @BotFather → `/mybots` → choose the bot →
-   *API Token* → *Revoke current token*. Copy the new token. (From this moment the currently
-   deployed telegram-mode build stops delivering leads — do steps 2–6 right away.)
+   *API Token* → *Revoke current token*. Copy the new token.
 2. **Store the new token outside the web root.** In File Manager create
    `/home/<cpanel-user>/itboost-lead-config.php` (the folder *above* `public_html`):
 
@@ -121,23 +121,18 @@ server and adds an origin check, validation, a honeypot and a rate limit (5 lead
    <?php
    return [
        'token'   => '1234567890:NEW-TOKEN-FROM-BOTFATHER',
-       'chat_id' => '123456789', // same value as PUBLIC_TG_CHAT_ID in your current .env
+       'chat_id' => '123456789',
    ];
    ```
 
-   Permissions `600` (or `640`). Alternatively set `ITBOOST_TG_TOKEN` and `ITBOOST_TG_CHAT_ID`
-   as environment variables for PHP — the script checks those first.
-3. **Switch the build.** In `.env`:
+   Permissions `600` (or `640`). Alternatively set `TG_BOT_TOKEN` and `TG_CHAT_ID` as environment
+   variables for PHP — the script checks those first.
+3. Build (`npm run build`) and upload `dist/` (section 3). Make sure `public_html/api/lead.php`
+   and `public_html/.htaccess` are present.
+4. **Test** (below), then send one real lead from the site and confirm it arrives.
 
-   ```dotenv
-   PUBLIC_LEAD_MODE=proxy
-   # PUBLIC_LEAD_ENDPOINT defaults to /api/lead (rewritten to lead.php by .htaccess)
-   # remove PUBLIC_TG_BOT_TOKEN / PUBLIC_TG_CHAT_ID entirely
-   ```
-
-4. Rebuild: `npm run build`. The token check from section 2 must print nothing.
-5. Upload `dist/` again (section 3). Make sure `public_html/api/lead.php` is present.
-6. **Test** (below), then send one real lead from the site and confirm it arrives.
+On Vercel the same steps are: revoke the token, put the new one into `TG_BOT_TOKEN` in the
+project settings, redeploy.
 
 ### Testing the proxy
 

@@ -14,7 +14,7 @@
  */
 import { isLang } from '@/i18n';
 import type { Lang } from '@/i18n';
-import { isLeadConfigured, submitLead } from '@/lib/lead';
+import { submitLead } from '@/lib/lead';
 import type { LeadPayload } from '@/lib/lead';
 import { prefersReducedMotion } from './motion';
 
@@ -196,10 +196,6 @@ function initLeadForm(form: HTMLFormElement): LeadFormApi | null {
   if (!status || !submit) {
     console.error('[lead] status region or submit button missing');
     return null;
-  }
-
-  if (!isLeadConfigured()) {
-    console.error('[lead] transport not configured — submissions will fail. See .env.example.');
   }
 
   // JS takes over validation (custom, localized messages).

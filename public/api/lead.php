@@ -125,8 +125,8 @@ function rate_limit_ok(string $ip): bool
 /** @return array{token: string, chat_id: string}|null */
 function load_config(): ?array
 {
-    $token = getenv('ITBOOST_TG_TOKEN');
-    $chat = getenv('ITBOOST_TG_CHAT_ID');
+    $token = getenv('TG_BOT_TOKEN') ?: getenv('ITBOOST_TG_TOKEN');
+    $chat = getenv('TG_CHAT_ID') ?: getenv('ITBOOST_TG_CHAT_ID');
     if (is_string($token) && $token !== '' && is_string($chat) && $chat !== '') {
         return ['token' => $token, 'chat_id' => $chat];
     }

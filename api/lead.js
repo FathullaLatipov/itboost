@@ -1,14 +1,14 @@
 /**
  * Vercel Function: POST /api/lead — server-side proxy for the contact form.
  *
- * The bot token lives ONLY in server environment variables (no PUBLIC_ prefix), so it never
- * reaches the browser. Mirrors public/api/lead.php (the cPanel variant): same validation,
- * honeypot, rate limit and Telegram message format (keep in sync with src/lib/lead.ts).
+ * The bot token lives ONLY in server environment variables, so it never reaches the browser.
+ * Mirrors public/api/lead.php (the cPanel variant): same validation, honeypot, rate limit and
+ * Telegram message format. The client (src/lib/lead.ts) needs no environment variables.
  *
- * Env (Vercel → Settings → Environment Variables):
- *   ITBOOST_TG_TOKEN    bot token from @BotFather (mark as Sensitive)
- *   ITBOOST_TG_CHAT_ID  chat that receives leads
- * Client build env: PUBLIC_LEAD_MODE=proxy, PUBLIC_LEAD_ENDPOINT=/api/lead
+ * Env (Vercel → Settings → Environment Variables) — server-only, no prefix:
+ *   TG_BOT_TOKEN   bot token from @BotFather (mark as Sensitive)
+ *   TG_CHAT_ID     chat that receives leads
+ *   (ITBOOST_TG_TOKEN / ITBOOST_TG_CHAT_ID are accepted as aliases)
  *
  * Request  (application/json): { name, phone, service, message, lang, page, company }
  * Response (application/json): { ok: true } | { ok: false, error: "<code>" }
@@ -213,10 +213,10 @@ export default async function handler(req, res) {
   const pageOk = page.length <= 300 && origins.some((origin) => page === origin || page.startsWith(`${origin}/`));
   if (!pageOk) page = '—';
 
-  const token = (process.env.ITBOOST_TG_TOKEN ?? '').trim();
-  const chatId = (process.env.ITBOOST_TG_CHAT_ID ?? '').trim();
+  const token = (process.env.TG_BOT_TOKEN || process.env.ITBOOST_TG_TOKEN || '').trim();
+  const chatId = (process.env.TG_CHAT_ID || process.env.ITBOOST_TG_CHAT_ID || '').trim();
   if (!token || !chatId) {
-    console.error('[itboost-lead] not configured: set ITBOOST_TG_TOKEN and ITBOOST_TG_CHAT_ID');
+    console.error('[itboost-lead] not configured: set TG_BOT_TOKEN and TG_CHAT_ID');
     return respond(res, 500, { ok: false, error: 'not_configured' });
   }
 
