@@ -1,0 +1,78 @@
+---
+/**
+ * Animated integer counter (L2 motion).
+ *
+ * - SSR renders the FINAL number, so crawlers, no-JS users and reduced-motion users always see
+ *   the true value.
+ * - With JS (`html.js`) the number counts up from 0 once the counter scrolls into view
+ *   (`src/scripts/counter.ts`). Screen readers get the final value via a visually hidden copy
+ *   while the animated digits are aria-hidden.
+ * - Digits are tabular and the box reserves the final width, so counting never shifts layout.
+ *
+ * Usage: <Counter value={projects.length} suffix="+" locale="ru" />
+ */
+interface Props {
+  value: number;
+  prefix?: string;
+  suffix?: string;
+  /** Count-up duration in ms. */
+  duration?: number;
+  /** Extra delay (ms) after the counter becomes visible — use to sync with a reveal stagger. */
+  delay?: number;
+  /** BCP 47 locale for digit grouping (e.g. "ru", "uz"). */
+  locale?: string;
+  class?: string;
+}
+
+const { value, prefix = '', suffix = '', duration = 1600, delay = 0, locale = 'ru', class: className } = Astro.props;
+
+const target = Number.isFinite(value) ? Math.round(value) : 0;
+const formatted = new Intl.NumberFormat(locale).format(target);
+---
+
+<span
+  class:list={['counter', className]}
+  data-counter
+  data-value={target}
+  data-duration={duration}
+  data-delay={delay}
+  data-locale={locale}
+  style={`--counter-ch:${formatted.length}`}
+><span class="counter__visual">{prefix && <span class="counter__affix">{prefix}</span>}<span class="counter__num">{formatted}</span>{suffix && <span class="counter__affix">{suffix}</span>}</span></span>
+
+<style>
+  .counter {
+    display: inline-flex;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    white-space: nowrap;
+  }
+
+  .counter__visual {
+    display: inline-flex;
+    align-items: baseline;
+  }
+
+  .counter__num {
+    display: inline-block;
+    /* Reserve the final width: tabular digits are 1ch wide, so counting never reflows. */
+    min-width: calc(var(--counter-ch, 1) * 1ch);
+  }
+
+  /* Before counter.ts takes over, hide the (final) digits so JS users never see 17 → 0 → 17.
+     A delayed fail-safe animation reveals them if the script never runs. */
+  :global(.js) .counter:not([data-counter-ready]) .counter__visual {
+    opacity: 0;
+    animation: counter-failsafe 0.01s linear 2.5s forwards;
+  }
+
+  @keyframes counter-failsafe {
+    to {
+      opacity: 1;
+    }
+  }
+</style>
+
+<script>
+  import '@/scripts/counter';
+</script>

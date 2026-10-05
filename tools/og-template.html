@@ -1,0 +1,182 @@
+<!doctype html>
+<!--
+  Open Graph card template (1200×630) — rendered by tools/make-og.py.
+  Placeholders: {{FONT_DIR}} (file:// URL of @fontsource-variable/onest/files), {{LOGO}}, {{MARK_PATHS}},
+  {{HEADLINE}}, {{META}}, {{TAG}}.
+-->
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: 'Onest';
+        font-weight: 100 900;
+        src: url('{{FONT_DIR}}/onest-cyrillic-wght-normal.woff2') format('woff2');
+        unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+      }
+      @font-face {
+        font-family: 'Onest';
+        font-weight: 100 900;
+        src: url('{{FONT_DIR}}/onest-latin-wght-normal.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+          U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+
+      :root {
+        --ink: #070d1a;
+        --ink-2: #0b1426;
+        --fg: #eef1f5;
+        --muted: #9aa4b5;
+        --blue: #48aaff;
+        --line: rgba(238, 241, 245, 0.1);
+        --mono: 'Cascadia Mono', 'Cascadia Code', Consolas, 'JetBrains Mono', ui-monospace, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+
+      html,
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: var(--ink);
+      }
+
+      .card {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        padding: 64px 72px 56px;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        color: var(--fg);
+        font-family: 'Onest', system-ui, sans-serif;
+        background: radial-gradient(ellipse 70% 90% at 100% 30%, var(--ink-2) 0%, var(--ink) 70%);
+        isolation: isolate;
+      }
+
+      /* Hex lattice — the brand motif, faded towards the text */
+      .lattice {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        -webkit-mask-image: radial-gradient(ellipse 60% 85% at 92% 42%, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 78%);
+        mask-image: radial-gradient(ellipse 60% 85% at 92% 42%, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 78%);
+      }
+
+      .mark {
+        position: absolute;
+        right: -150px;
+        top: 168px;
+        z-index: -1;
+        width: 540px;
+      }
+
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .logo {
+        height: 46px;
+        width: auto;
+      }
+
+      .tag {
+        font-family: var(--mono);
+        font-size: 17px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .tag::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--blue);
+      }
+
+      h1 {
+        align-self: center;
+        max-width: 860px;
+        font-size: 76px;
+        font-weight: 600;
+        line-height: 1.02;
+        letter-spacing: -0.04em;
+        text-wrap: balance;
+      }
+
+      h1 em {
+        font-style: normal;
+        color: var(--blue);
+      }
+
+      .bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 26px;
+        border-top: 1px solid var(--line);
+        font-family: var(--mono);
+        font-size: 22px;
+        letter-spacing: 0.04em;
+        color: var(--fg);
+      }
+
+      .bottom .dot {
+        color: var(--blue);
+        padding: 0 0.35em;
+      }
+
+      .chev {
+        color: var(--muted);
+        font-size: 18px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <svg class="lattice" width="1200" height="630" aria-hidden="true">
+        <defs>
+          <!-- flat-top hexagons, r = 30 -->
+          <pattern id="hex" width="90" height="51.96" patternUnits="userSpaceOnUse" patternTransform="translate(10 6)">
+            <path
+              d="M15 0H45L60 25.98 45 51.96H15L0 25.98ZM60 25.98H90"
+              fill="none"
+              stroke="rgba(72,170,255,0.16)"
+              stroke-width="1"
+            />
+          </pattern>
+        </defs>
+        <rect width="1200" height="630" fill="url(#hex)" />
+      </svg>
+
+      <svg class="mark" viewBox="55 52 597 336" aria-hidden="true">
+        <g fill="none" stroke="rgba(72,170,255,0.42)" stroke-width="2">{{MARK_PATHS}}</g>
+      </svg>
+
+      <div class="top">
+        <img class="logo" src="{{LOGO}}" alt="ITBoost" />
+        <span class="tag">{{TAG}}</span>
+      </div>
+
+      <h1>{{HEADLINE}}</h1>
+
+      <div class="bottom">
+        <span>{{META}}</span>
+        <span class="chev">&lt;/&gt; Web · Apps · AI</span>
+      </div>
+    </div>
+  </body>
+</html>

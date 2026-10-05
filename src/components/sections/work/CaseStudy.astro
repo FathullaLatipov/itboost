@@ -1,0 +1,412 @@
+---
+/**
+ * Featured case study: large storytelling block, media alternates left/right on desktop.
+ * Media = browser-framed screenshot with a clip-path mask reveal, a gentle in-frame parallax
+ * (desktop + fine pointer, see src/scripts/work.ts) and a full-cover button that opens the lightbox.
+ * problem / solution / result rows render only when the content has them.
+ */
+import { Picture } from 'astro:assets';
+import type { Lang } from '@/i18n';
+import type { Project } from '@/content/projects';
+import { workSection } from '@/content/projects';
+import Badge from '@/components/ui/Badge.astro';
+import Button from '@/components/ui/Button.astro';
+import Icon from '@/components/ui/Icon.astro';
+import SplitText from '@/components/ui/SplitText.astro';
+import DeviceFrame from './DeviceFrame.astro';
+import type { LightboxImage } from './media';
+import { fillName, lightboxAttrs } from './media';
+
+interface Props {
+  project: Project;
+  lang: Lang;
+  lightbox: LightboxImage;
+  /** 0-based position among featured projects. */
+  index: number;
+  total: number;
+}
+
+const { project, lang, lightbox, index, total } = Astro.props;
+const { labels } = workSection[lang];
+const copy = project.copy[lang];
+const alt = fillName(labels.shot, project.name);
+const pad = (n: number): string => String(n).padStart(2, '0');
+const titleId = `case-${project.id}`;
+const flip = index % 2 === 1;
+
+const story: { term: string; value: string }[] = [
+  { term: labels.problem, value: copy.problem ?? '' },
+  { term: labels.solution, value: copy.solution ?? '' },
+  { term: labels.result, value: copy.result ?? '' },
+].filter((row) => row.value.trim().length > 0);
+---
+
+<article class:list={['case', { 'case--flip': flip }]} aria-labelledby={titleId}>
+  <div class="case__media" data-case-media>
+    <div class="case__reveal">
+      <DeviceFrame
+        device={project.device}
+        label={project.linkLabel}
+        fit="ratio"
+        size="lg"
+        shotRatio={project.image.width / project.image.height}
+        parallax
+      >
+        {
+          project.device === 'phone' ? (
+            <Picture
+              src={project.image}
+              alt={alt}
+              width={720}
+              widths={[360, 540, 720]}
+              sizes="300px"
+              formats={['avif']}
+              fallbackFormat="webp"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <Picture
+              src={project.image}
+              alt={alt}
+              width={1600}
+              widths={[640, 960, 1280, 1600]}
+              sizes="(min-width: 1440px) 790px, (min-width: 1024px) 56vw, 92vw"
+              formats={['avif']}
+              fallbackFormat="webp"
+              loading="lazy"
+              decoding="async"
+            />
+          )
+        }
+      </DeviceFrame>
+    </div>
+    <button
+      type="button"
+      class="case__zoom"
+      aria-label={`${labels.zoom}: ${project.name}`}
+      aria-haspopup="dialog"
+      data-cursor="view"
+      data-cursor-label={labels.view}
+      {...lightboxAttrs(project, lightbox, alt)}
+    >
+      <span class="case__zoom-hint" aria-hidden="true">
+        <Icon name="zoom" size={18} />
+      </span>
+    </button>
+  </div>
+
+  <div class="case__body">
+    <p class="case__no t-meta" data-reveal="fade">
+      <span>{labels.caseNo} <span class="case__no-num">{pad(index + 1)}</span></span>
+      <span class="case__no-rule" aria-hidden="true"></span>
+      <span aria-hidden="true">{pad(index + 1)}/{pad(total)}</span>
+    </p>
+
+    <h3 class="case__title" id={titleId} data-split>
+      <SplitText text={project.name} />
+    </h3>
+
+    <p class="case__summary" data-reveal style="--i:1">{copy.summary}</p>
+
+    <dl class="case__meta" data-reveal style="--i:2">
+      {
+        copy.industry && (
+          <div class="case__row">
+            <dt class="t-meta">{labels.industry}</dt>
+            <dd>{copy.industry}</dd>
+          </div>
+        )
+      }
+      <div class="case__row">
+        <dt class="t-meta">{labels.format}</dt>
+        <dd>{copy.format}</dd>
+      </div>
+      <div class="case__row">
+        <dt class="t-meta">{labels.platform}</dt>
+        <dd>
+          <ul class="case__platforms" role="list">
+            {
+              project.platforms.map((platform) => (
+                <li>
+                  <Badge variant="mono">{platform}</Badge>
+                </li>
+              ))
+            }
+          </ul>
+        </dd>
+      </div>
+      {
+        story.map((row) => (
+          <div class="case__row case__row--story">
+            <dt class="t-meta">{row.term}</dt>
+            <dd>{row.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+
+    <div class="case__actions" data-reveal style="--i:3">
+      <Button href={project.url} variant="ghost" icon="arrow-up-right" external>
+        {labels.open}<span class="sr-only">: {project.name}, {labels.newTab}</span>
+      </Button>
+    </div>
+  </div>
+</article>
+
+<style>
+  .case {
+    display: grid;
+    gap: var(--space-6);
+    align-items: center;
+  }
+
+  /* ---- Media ------------------------------------------------------------------ */
+  .case__media {
+    position: relative;
+    min-width: 0;
+  }
+
+  /* Mask reveal, driven by work.ts (.is-revealed on the unclipped wrapper — an observer cannot
+     see a target that is itself fully clipped). Hidden state only with JS. */
+  :global(.js) .case__reveal {
+    clip-path: inset(0 0 100% 0);
+    transition: clip-path var(--dur-4) var(--ease-out);
+  }
+
+  .case__media.is-revealed .case__reveal {
+    clip-path: inset(0 0 0 0);
+  }
+
+  .case__media :global(.frame) {
+    transition: border-color var(--dur-2) var(--ease-out);
+  }
+
+  .case__media :global(.frame__media img) {
+    transform-origin: 50% 0;
+    transition: transform var(--dur-4) var(--ease-out);
+  }
+
+  /* Image settles from a slight zoom while the mask opens */
+  :global(.js) .case__media:not(.is-revealed) :global(.frame__media img) {
+    transform: scale(1.08);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(.js) .case__reveal {
+      clip-path: none;
+    }
+
+    :global(.js) .case__media:not(.is-revealed) :global(.frame__media img) {
+      transform: none;
+    }
+  }
+
+  .case__zoom {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+  }
+
+  .case__zoom:focus-visible {
+    outline-offset: 4px;
+    border-radius: var(--radius-md);
+  }
+
+  .case__zoom-hint {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    /* solid chip instead of backdrop blur: 20 blurred chips over images were costly to scroll */
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    color: var(--fg);
+    transition:
+      opacity var(--dur-2) var(--ease-out),
+      transform var(--dur-2) var(--ease-out),
+      background-color var(--dur-2) var(--ease-out),
+      color var(--dur-2) var(--ease-out),
+      border-color var(--dur-2) var(--ease-out);
+  }
+
+  /* Hover styles only where hover exists — a tap must not leave the frame "stuck" lit. */
+  .case__media:has(.case__zoom:focus-visible) :global(.frame) {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  }
+
+  .case__zoom:focus-visible .case__zoom-hint {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+
+  @media (hover: hover) {
+    .case__media:has(.case__zoom:hover) :global(.frame) {
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+    }
+
+    .case__zoom:hover .case__zoom-hint {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--on-accent);
+    }
+
+    .case__zoom-hint {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+
+    .case__zoom:is(:hover, :focus-visible) .case__zoom-hint {
+      opacity: 1;
+      transform: none;
+    }
+
+    .case__media.is-revealed:has(.case__zoom:hover) :global(.frame__media img) {
+      transform: scale(1.03);
+      transition-duration: var(--dur-3);
+    }
+  }
+
+  /* ---- Body ------------------------------------------------------------------ */
+  .case__body {
+    display: grid;
+    gap: var(--space-5);
+    min-width: 0;
+    max-width: 40rem;
+  }
+
+  .case__no {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .case__no-num {
+    color: var(--accent-text);
+  }
+
+  .case__no-rule {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .case__title {
+    font-size: clamp(2rem, 1.4rem + 2.6vw, 3.75rem);
+    line-height: 1;
+    letter-spacing: var(--tracking-heading);
+    overflow-wrap: anywhere;
+  }
+
+  .case__summary {
+    max-width: 34rem;
+    color: var(--fg-muted);
+    font-size: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+    line-height: 1.6;
+  }
+
+  .case__meta {
+    display: grid;
+    border-top: 1px solid var(--line);
+  }
+
+  .case__row {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, 34%) minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: baseline;
+    padding-block: var(--space-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .case__row dd {
+    margin: 0;
+    min-width: 0;
+    color: var(--fg);
+    font-size: var(--text-small);
+    line-height: 1.5;
+  }
+
+  .case__row--story dd {
+    color: var(--fg-muted);
+  }
+
+  .case__platforms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  /* Room inside the reveal clip for the button's focus ring */
+  .case__actions {
+    margin: 0 -8px -8px;
+    padding: var(--space-2) 8px 8px;
+  }
+
+  /* ---- Phones: denser story block ---------------------------------------------- */
+  @media (max-width: 767.98px) {
+    .case {
+      gap: var(--space-5);
+    }
+
+    .case__body {
+      gap: var(--space-4);
+    }
+
+    .case__zoom {
+      padding: var(--space-3);
+    }
+
+    .case__row {
+      grid-template-columns: 6.25rem minmax(0, 1fr);
+      gap: var(--space-3);
+      padding-block: 0.6rem;
+    }
+
+    .case__platforms :global(.badge) {
+      min-height: 24px;
+      padding-block: 0.15rem;
+    }
+
+    .case__actions {
+      padding-top: 0;
+    }
+  }
+
+  /* ---- Desktop: 12-col split, alternating sides ------------------------------- */
+  @media (min-width: 1024px) {
+    .case {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gutter);
+    }
+
+    .case__media {
+      grid-column: 1 / span 7;
+      grid-row: 1;
+    }
+
+    .case__body {
+      grid-column: 8 / -1;
+      grid-row: 1;
+      max-width: none;
+      padding-left: clamp(0rem, -2rem + 3vw, 2.5rem);
+    }
+
+    .case--flip .case__media {
+      grid-column: 6 / -1;
+    }
+
+    .case--flip .case__body {
+      grid-column: 1 / span 5;
+      padding-left: 0;
+      padding-right: clamp(0rem, -2rem + 3vw, 2.5rem);
+    }
+  }
+</style>

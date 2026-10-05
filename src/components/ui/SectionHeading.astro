@@ -1,0 +1,106 @@
+---
+import SplitText from './SplitText.astro';
+
+/**
+ * Standard section header: mono index + eyebrow, large title (word reveal), optional lead.
+ * Slot "aside" renders on the right on wide screens (e.g. a CTA or filter).
+ */
+interface Props {
+  index: string;
+  eyebrow: string;
+  title: string;
+  lead?: string;
+  id?: string;
+  align?: 'start' | 'center';
+  as?: 'h1' | 'h2';
+  class?: string;
+}
+
+const { index, eyebrow, title, lead, id, align = 'start', as: Tag = 'h2', class: className } = Astro.props;
+const hasAside = Astro.slots.has('aside');
+---
+
+<header class:list={['section-heading', `section-heading--${align}`, { 'has-aside': hasAside }, className]}>
+  <div class="section-heading__main">
+    <p class="section-heading__eyebrow t-meta" data-reveal="fade">
+      <span class="section-heading__index">{index}</span>
+      <span class="section-heading__rule" aria-hidden="true"></span>
+      <span>{eyebrow}</span>
+    </p>
+    <Tag class="section-heading__title t-h2" id={id} data-split>
+      <SplitText text={title} />
+    </Tag>
+    {
+      lead && (
+        <p class="section-heading__lead t-lead" data-reveal style="--i:2">
+          {lead}
+        </p>
+      )
+    }
+  </div>
+  {
+    hasAside && (
+      <div class="section-heading__aside" data-reveal style="--i:3">
+        <slot name="aside" />
+      </div>
+    )
+  }
+</header>
+
+<style>
+  .section-heading {
+    display: grid;
+    gap: var(--space-6);
+    margin-bottom: clamp(2.5rem, 1.5rem + 4vw, 5rem);
+  }
+
+  /* Phones: tighter heading block — the vertical rhythm matters more than air on small screens */
+  @media (max-width: 767px) {
+    .section-heading {
+      gap: var(--space-5);
+      margin-bottom: 2rem;
+    }
+  }
+
+  .section-heading--center {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .section-heading__main {
+    display: grid;
+    gap: var(--space-5);
+    max-width: 58rem;
+  }
+
+  .section-heading__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .section-heading--center .section-heading__eyebrow {
+    justify-content: center;
+  }
+
+  .section-heading__index {
+    color: var(--accent-text);
+  }
+
+  .section-heading__rule {
+    width: 2.5rem;
+    height: 1px;
+    background: var(--line-strong);
+  }
+
+  .section-heading__lead {
+    max-width: 40rem;
+  }
+
+  @media (min-width: 1024px) {
+    .section-heading.has-aside {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+    }
+  }
+</style>

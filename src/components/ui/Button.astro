@@ -1,0 +1,252 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import Icon from './Icon.astro';
+import type { IconName } from './Icon.astro';
+
+/**
+ * Button / link-button.
+ * - primary: Boost Blue fill — main conversion actions (max 1–2 per viewport)
+ * - secondary: hairline outline — supporting actions
+ * - ghost: text + animated underline — tertiary / inline actions
+ * `magnetic` — subtle pointer attraction (desktop only). Use on primary CTAs only.
+ */
+interface Props extends Omit<HTMLAttributes<'a'>, 'type'> {
+  variant?: 'primary' | 'secondary' | 'ghost';
+  size?: 'md' | 'lg';
+  icon?: IconName | false;
+  magnetic?: boolean;
+  type?: 'button' | 'submit';
+  external?: boolean;
+}
+
+const {
+  href,
+  variant = 'primary',
+  size = 'md',
+  icon = 'arrow-right',
+  magnetic = false,
+  type = 'button',
+  external = false,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const classes = ['btn', `btn--${variant}`, `btn--${size}`, className];
+const externalAttrs = external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+---
+
+{
+  href ? (
+    <a
+      href={href}
+      class:list={classes}
+      data-magnetic={magnetic ? '' : undefined}
+      data-cursor="cta"
+      {...externalAttrs}
+      {...rest}
+    >
+      <span class="btn__label">
+        <slot />
+      </span>
+      {icon && (
+        <span class="btn__icon">
+          <Icon name={icon} size={18} />
+        </span>
+      )}
+    </a>
+  ) : (
+    <button type={type} class:list={classes} data-magnetic={magnetic ? '' : undefined} data-cursor="cta" {...rest}>
+      <span class="btn__label">
+        <slot />
+      </span>
+      {icon && (
+        <span class="btn__icon">
+          <Icon name={icon} size={18} />
+        </span>
+      )}
+    </button>
+  )
+}
+
+<style>
+  .btn {
+    --btn-h: 48px;
+    --btn-px: 1.4rem;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: var(--btn-h);
+    padding: 0 var(--btn-px);
+    border-radius: var(--radius-pill);
+    font-weight: var(--weight-semibold);
+    font-size: 0.975rem;
+    line-height: 1.1;
+    letter-spacing: -0.005em;
+    text-align: center;
+    white-space: nowrap;
+    isolation: isolate;
+    transition:
+      background-color var(--dur-2) var(--ease-out),
+      border-color var(--dur-2) var(--ease-out),
+      color var(--dur-2) var(--ease-out),
+      box-shadow var(--dur-2) var(--ease-out),
+      transform var(--dur-2) var(--ease-out);
+  }
+
+  .btn--lg {
+    --btn-h: 56px;
+    --btn-px: 1.75rem;
+    font-size: 1.025rem;
+  }
+
+  .btn__label {
+    display: inline-block;
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  .btn__icon {
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    margin-right: -0.6rem;
+    border-radius: 50%;
+    overflow: hidden;
+    transition:
+      background-color var(--dur-2) var(--ease-out),
+      transform var(--dur-2) var(--ease-out);
+  }
+
+  .btn__icon :global(svg) {
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  /* Primary */
+  .btn--primary {
+    background: var(--blue-500);
+    color: var(--on-accent);
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+
+  .btn--primary .btn__icon {
+    background: rgba(6, 16, 31, 0.12);
+  }
+
+  /* Secondary */
+  .btn--secondary {
+    border: 1px solid var(--line-strong);
+    color: var(--fg);
+  }
+
+  .btn--secondary .btn__icon {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+
+  /* Ghost */
+  .btn--ghost {
+    --btn-px: 0;
+    min-height: 44px;
+    border-radius: 0;
+    color: var(--fg);
+  }
+
+  .btn--ghost .btn__label {
+    background: linear-gradient(currentColor, currentColor) 0 100% / 0% 1px no-repeat;
+    padding-bottom: 2px;
+    transition:
+      background-size var(--dur-2) var(--ease-out),
+      transform var(--dur-2) var(--ease-out);
+  }
+
+  .btn--ghost .btn__icon {
+    width: auto;
+    height: auto;
+    margin-right: 0;
+    color: var(--accent-text);
+  }
+
+  @media (hover: hover) {
+    .btn--primary:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 10px 40px -10px var(--accent-glow);
+    }
+
+    .btn--secondary:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .btn--ghost:hover .btn__label {
+      background-size: 100% 1px;
+    }
+
+    .btn:hover .btn__icon :global(svg) {
+      transform: translateX(3px);
+    }
+
+    .btn:hover .btn__icon :global(svg[data-dir='diag']) {
+      transform: translate(2px, -2px);
+    }
+  }
+
+  .btn:active {
+    transform: scale(0.98);
+  }
+
+  .btn:focus-visible {
+    outline-offset: 4px;
+    border-radius: var(--radius-pill);
+  }
+
+  .btn[aria-disabled='true'],
+  .btn:disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  @media (max-width: 479px) {
+    .btn {
+      white-space: normal;
+    }
+  }
+</style>
+
+<script>
+  // Magnetic pull for [data-magnetic] buttons — desktop pointers only, reduced-motion aware.
+  const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  function bindMagnetic(el: HTMLElement): void {
+    const strength = 0.28;
+    const max = 10;
+    let frame = 0;
+
+    const onMove = (event: PointerEvent): void => {
+      if (reduced.matches) return;
+      const rect = el.getBoundingClientRect();
+      const dx = event.clientX - (rect.left + rect.width / 2);
+      const dy = event.clientY - (rect.top + rect.height / 2);
+      const x = Math.max(-max, Math.min(max, dx * strength));
+      const y = Math.max(-max, Math.min(max, dy * strength));
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      });
+    };
+
+    const onLeave = (): void => {
+      cancelAnimationFrame(frame);
+      el.style.transform = '';
+    };
+
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerleave', onLeave);
+  }
+
+  if (finePointer.matches) {
+    document.querySelectorAll<HTMLElement>('[data-magnetic]').forEach(bindMagnetic);
+  }
+</script>

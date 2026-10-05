@@ -1,0 +1,532 @@
+---
+/**
+ * 02 — Services: interactive service explorer.
+ * ≥1024px: editorial list (left) + sticky detail panel (right) that follows hover / focus / selection.
+ * <1024px: accordion, one open at a time.
+ * Without JS every row is expanded and the panel is hidden.
+ * Behaviour: src/scripts/services.ts
+ */
+import type { Lang } from '@/i18n';
+import { anchor } from '@/i18n';
+import { services, servicesSection } from '@/content/services';
+import SectionHeading from '@/components/ui/SectionHeading.astro';
+import Button from '@/components/ui/Button.astro';
+import Badge from '@/components/ui/Badge.astro';
+import Icon from '@/components/ui/Icon.astro';
+import ServiceHex from './services/ServiceHex.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = servicesSection[lang];
+const contact = anchor(lang, 'contact');
+const total = services.length;
+const pad = (n: number): string => String(n).padStart(2, '0');
+const items = services.map((service, i) => ({ id: service.id, index: pad(i + 1), copy: service.copy[lang] }));
+---
+
+<section id="services" class="section section--divided" data-theme="light" aria-labelledby="services-title">
+  <div class="container">
+    <SectionHeading index="02" eyebrow={t.eyebrow} title={t.title} lead={t.lead} id="services-title">
+      <Button slot="aside" href={contact} variant="secondary">{t.cta}</Button>
+    </SectionHeading>
+
+    <div class="svc" data-services style={`--svc-count:${total}`}>
+      <ol class="svc__list" role="list">
+        {
+          items.map((item, i) => (
+            <li
+              class:list={['svc-row', { 'is-active': i === 0, 'is-open': i === 0 }]}
+              data-reveal
+              style={`--i:${Math.min(i, 5)}`}
+            >
+              <h3 class="svc-row__heading">
+                <button
+                  type="button"
+                  class="svc-row__btn"
+                  id={`svc-trigger-${item.id}`}
+                  data-svc-trigger={i}
+                  aria-expanded={i === 0 ? 'true' : 'false'}
+                  aria-controls={`svc-body-${item.id}`}
+                >
+                  <span class="svc-row__index" aria-hidden="true">
+                    {item.index}
+                  </span>
+                  <span class="svc-row__text">
+                    <span class="svc-row__title">{item.copy.title}</span>
+                    <span class="svc-row__value" aria-hidden="true">
+                      {item.copy.value}
+                    </span>
+                  </span>
+                  <span class="svc-row__icon" aria-hidden="true">
+                    <Icon name="arrow-right" size={20} class="svc-row__arrow" />
+                    <Icon name="plus" size={20} class="svc-row__plus" />
+                  </span>
+                </button>
+              </h3>
+              <div class="svc-row__body" id={`svc-body-${item.id}`}>
+                <div class="svc-row__clip">
+                  <div class="svc-row__content">
+                    <p class="svc-row__lead">{item.copy.value}</p>
+                    <p class="svc-row__details">{item.copy.details}</p>
+                    <ul class="svc-tags" role="list">
+                      {item.copy.tags.map((tag) => (
+                        <li>
+                          <Badge>{tag}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button href={contact} data-lead-service={item.id} class="svc-row__cta">
+                      {t.cta}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+
+      <div class="svc-panel" id="services-panel" data-svc-panel aria-live="polite" data-reveal="fade" style="--i:2">
+        <ServiceHex count={total} class="svc-panel__hex" />
+        <div class="svc-panel__stack">
+          {
+            items.map((item, i) => (
+              <article
+                class:list={['svc-detail', { 'is-active': i === 0 }]}
+                data-svc-detail={i}
+                aria-labelledby={`svc-detail-title-${item.id}`}
+              >
+                <p class="svc-detail__count" aria-hidden="true">
+                  <span class="svc-detail__index">{item.index}</span>
+                  <span class="svc-detail__total">/ {pad(total)}</span>
+                </p>
+                <p class="svc-detail__title t-h3" id={`svc-detail-title-${item.id}`}>
+                  {item.copy.title}
+                </p>
+                <p class="svc-detail__lead">{item.copy.value}</p>
+                <p class="svc-detail__text">{item.copy.details}</p>
+                <ul class="svc-tags" role="list">
+                  {item.copy.tags.map((tag) => (
+                    <li>
+                      <Badge>{tag}</Badge>
+                    </li>
+                  ))}
+                </ul>
+                <div class="svc-detail__footer">
+                  <Button href={contact} data-lead-service={item.id}>
+                    {t.cta}
+                  </Button>
+                </div>
+              </article>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .svc {
+    position: relative;
+  }
+
+  /* ---- List / rows ----------------------------------------------------- */
+  .svc__list {
+    border-top: 1px solid var(--line);
+  }
+
+  .svc-row {
+    position: relative;
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* Accent bar on the bottom rule of the active / open row */
+  .svc-row::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--dur-3) var(--ease-out);
+    pointer-events: none;
+  }
+
+  .svc-row__heading {
+    font: inherit;
+    letter-spacing: normal;
+  }
+
+  .svc-row__btn {
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 1fr) 44px;
+    align-items: center;
+    column-gap: var(--space-3);
+    width: 100%;
+    min-height: 72px;
+    padding-block: var(--space-4);
+    text-align: left;
+    color: var(--fg);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .svc-row__btn:focus-visible {
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  .svc-row__index {
+    align-self: start;
+    padding-top: 0.45em;
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-meta);
+    color: var(--fg-faint);
+    transition: color var(--dur-2) var(--ease-out);
+  }
+
+  .svc-row__text {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .svc-row__title {
+    display: block;
+    font-size: var(--text-h3);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+    text-wrap: balance;
+    transition: color var(--dur-2) var(--ease-out);
+  }
+
+  .svc-row__value {
+    display: none;
+    max-width: 62ch;
+    color: var(--fg-muted);
+    font-size: var(--text-body);
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  .svc-row__icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    color: var(--fg);
+    transition:
+      border-color var(--dur-2) var(--ease-out),
+      background-color var(--dur-2) var(--ease-out),
+      color var(--dur-2) var(--ease-out);
+  }
+
+  .svc-row__icon :global(svg) {
+    grid-area: 1 / 1;
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  .svc-row__icon :global(.svc-row__arrow) {
+    display: none;
+  }
+
+  /* ---- Inline body (accordion) ----------------------------------------- */
+  .svc-row__body {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--dur-2) var(--ease-in-out);
+  }
+
+  .svc-row__clip {
+    min-height: 0;
+    overflow: hidden;
+    /* room for the CTA's focus ring (the content is flush left below 480px) */
+    margin-inline: -6px;
+    padding-inline: 6px;
+  }
+
+  .svc-row__content {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-4);
+    padding: 0 0 var(--space-6);
+  }
+
+  .svc-row__lead {
+    font-size: var(--text-lead);
+    line-height: 1.45;
+    color: var(--fg);
+  }
+
+  .svc-row__details {
+    color: var(--fg-muted);
+    max-width: 60ch;
+  }
+
+  .svc-row__content :global(.svc-row__cta) {
+    margin-top: var(--space-2);
+  }
+
+  .svc-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: 0;
+    list-style: none;
+  }
+
+  .svc-tags :global(.badge) {
+    white-space: normal;
+  }
+
+  @media (min-width: 480px) {
+    .svc-row__btn {
+      grid-template-columns: 3rem minmax(0, 1fr) 44px;
+      column-gap: var(--space-4);
+    }
+
+    .svc-row__content {
+      padding-left: calc(3rem + var(--space-4));
+      padding-right: calc(44px + var(--space-4));
+    }
+  }
+
+  /* Accordion behaviour (JS only, below desktop) */
+  @media (max-width: 1023.98px) {
+    :global(.js) .svc-row:not(.is-open) .svc-row__body {
+      grid-template-rows: 0fr;
+    }
+
+    :global(.js) .svc-row__content {
+      transition:
+        opacity var(--dur-2) var(--ease-out),
+        transform var(--dur-2) var(--ease-out),
+        visibility 0s linear 0s;
+    }
+
+    :global(.js) .svc-row:not(.is-open) .svc-row__content {
+      visibility: hidden;
+      opacity: 0;
+      transform: translate3d(0, -8px, 0);
+      transition:
+        opacity var(--dur-1) var(--ease-out),
+        transform var(--dur-2) var(--ease-out),
+        visibility 0s linear var(--dur-2);
+    }
+
+    :global(.js) .svc-row.is-open::after {
+      transform: scaleX(1);
+    }
+
+    :global(.js) .svc-row.is-open .svc-row__index {
+      color: var(--accent-text);
+    }
+
+    :global(.js) .svc-row.is-open .svc-row__icon {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-text);
+    }
+
+    :global(.js) .svc-row.is-open .svc-row__icon :global(.svc-row__plus) {
+      transform: rotate(45deg);
+    }
+
+    /* services.ts: an open row above the tapped one collapses without animation while the page is
+       shifted by the same amount (keeps the tapped header under the finger). */
+    :global(.js) .svc-row.is-instant .svc-row__body,
+    :global(.js) .svc-row.is-instant .svc-row__content {
+      transition: none;
+    }
+  }
+
+  /* ---- Detail panel ----------------------------------------------------- */
+  .svc-panel {
+    display: none;
+  }
+
+  @media (min-width: 1024px) {
+    .svc {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gutter);
+      align-items: start;
+    }
+
+    .svc__list {
+      grid-column: 1 / span 7;
+    }
+
+    .svc-row__btn {
+      grid-template-columns: 3.5rem minmax(0, 1fr) 44px;
+      column-gap: var(--space-5);
+      padding-block: clamp(1.25rem, 0.6rem + 1vw, 1.75rem);
+    }
+
+    .svc-row__value {
+      display: block;
+    }
+
+    /* Without JS the inline body (which repeats this line as its lead) is shown instead,
+       aligned with the row title. */
+    :global(html:not(.js)) .svc-row__value {
+      display: none;
+    }
+
+    .svc-row__content {
+      padding-left: calc(3.5rem + var(--space-5));
+    }
+
+    .svc-row__icon :global(.svc-row__arrow) {
+      display: block;
+    }
+
+    .svc-row__icon :global(.svc-row__plus) {
+      display: none;
+    }
+
+    :global(.js) .svc-row__body {
+      display: none;
+    }
+
+    /* Explorer states */
+    :global(.js) .svc-row:not(.is-active) .svc-row__title {
+      color: var(--fg-muted);
+    }
+
+    :global(.js) .svc-row.is-active::after {
+      transform: scaleX(1);
+    }
+
+    :global(.js) .svc-row.is-active .svc-row__index {
+      color: var(--accent-text);
+    }
+
+    :global(.js) .svc-row.is-active .svc-row__icon {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+
+    :global(.js) .svc-row.is-active .svc-row__icon :global(svg) {
+      transform: translateX(3px);
+    }
+
+    /* Hover preview only for real hovering pointers — a tap must not leave it stuck. */
+    @media (hover: hover) {
+      :global(.js) .svc-row:not(.is-active) .svc-row__btn:hover .svc-row__title {
+        color: var(--fg);
+      }
+
+      :global(.js) .svc-row:not(.is-active) .svc-row__btn:hover .svc-row__icon {
+        border-color: var(--fg-faint);
+      }
+    }
+
+    :global(.js) .svc-panel {
+      display: block;
+      grid-column: 8 / -1;
+      position: sticky;
+      top: calc(var(--header-h) + var(--space-5));
+      overflow: hidden;
+      padding: clamp(1.75rem, 0.9rem + 1.6vw, 2.75rem);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+    }
+  }
+
+  .svc-panel :global(.svc-panel__hex) {
+    position: absolute;
+    top: clamp(1.25rem, 0.5rem + 1.4vw, 2.25rem);
+    right: clamp(1.25rem, 0.5rem + 1.4vw, 2.25rem);
+    width: clamp(84px, 3rem + 3vw, 112px);
+    height: auto;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .svc-panel__stack {
+    position: relative;
+    z-index: 1;
+    display: grid;
+  }
+
+  .svc-detail {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+    visibility: hidden;
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+    transition:
+      opacity var(--dur-1) var(--ease-out),
+      transform var(--dur-2) var(--ease-out),
+      visibility 0s linear var(--dur-2);
+  }
+
+  .svc-detail.is-active {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity var(--dur-2) var(--ease-out) 90ms,
+      transform var(--dur-3) var(--ease-out) 90ms,
+      visibility 0s linear 0s;
+  }
+
+  .svc-detail__count {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    font-family: var(--font-mono);
+    line-height: 1;
+  }
+
+  .svc-detail__index {
+    font-size: clamp(3rem, 1.6rem + 2.6vw, 4.75rem);
+    letter-spacing: -0.06em;
+    color: var(--accent-text);
+  }
+
+  .svc-detail__total {
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-meta);
+    color: var(--fg-faint);
+  }
+
+  .svc-detail__lead {
+    font-size: var(--text-lead);
+    line-height: 1.45;
+    color: var(--fg);
+  }
+
+  .svc-detail__text {
+    color: var(--fg-muted);
+  }
+
+  /* CTA sits at the same spot for every service: the panel height is the tallest detail. */
+  .svc-detail__footer {
+    align-self: stretch;
+    margin-top: auto;
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--line);
+  }
+</style>
+
+<script>
+  import '@/scripts/services';
+</script>

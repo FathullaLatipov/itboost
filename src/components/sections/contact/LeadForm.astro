@@ -1,0 +1,512 @@
+---
+/**
+ * Lead form. Markup + styles only; behaviour lives in src/scripts/lead-form.ts and the transport
+ * in src/lib/lead.ts. Error texts are rendered into data attributes so the script stays
+ * language-agnostic; error elements are empty (and therefore silent) until a field is invalid.
+ */
+import type { Lang } from '@/i18n';
+import { contact } from '@/content/contact';
+import { services } from '@/content/services';
+import { site } from '@/content/site';
+import Button from '@/components/ui/Button.astro';
+import Icon from '@/components/ui/Icon.astro';
+
+interface Props {
+  lang: Lang;
+  /** id of the heading that names the form */
+  labelledBy?: string;
+}
+
+const { lang, labelledBy } = Astro.props;
+const f = contact[lang].form;
+const id = (name: string): string => `lead-${name}`;
+---
+
+<form class="lead-form" method="post" data-lead-form data-lang={lang} data-sending={f.sending} aria-labelledby={labelledBy}>
+  <div class="lead-form__head">
+    <p class="t-meta lead-form__title">
+      <span class="lead-form__dot" aria-hidden="true"></span>
+      {f.title}
+    </p>
+    <p class="t-meta">{f.requiredNote}</p>
+  </div>
+
+  <div class="lead-form__fields" data-cursor="hide">
+    <div class="field" data-field="name">
+      <label class="field__label" for={id('name')}>{f.name}</label>
+      <input
+        class="field__control"
+        id={id('name')}
+        name="name"
+        type="text"
+        autocomplete="name"
+        autocapitalize="words"
+        enterkeyhint="next"
+        required
+        minlength="2"
+        maxlength="80"
+        placeholder={f.namePlaceholder}
+        aria-describedby={id('name-error')}
+      />
+      <p class="field__error" id={id('name-error')} data-error={f.errors.name}></p>
+    </div>
+
+    <div class="field" data-field="phone">
+      <label class="field__label" for={id('phone')}>{f.phone}</label>
+      <input
+        class="field__control"
+        id={id('phone')}
+        name="phone"
+        type="tel"
+        inputmode="tel"
+        autocomplete="tel"
+        enterkeyhint="next"
+        required
+        maxlength="32"
+        placeholder={f.phonePlaceholder}
+        aria-describedby={id('phone-error')}
+      />
+      <p class="field__error" id={id('phone-error')} data-error={f.errors.phone}></p>
+    </div>
+
+    <div class="field field--wide field--select" data-field="service">
+      <label class="field__label" for={id('service')}>{f.service}</label>
+      <div class="field__select">
+        <select class="field__control" id={id('service')} name="service" required aria-describedby={id('service-error')}>
+          <option value="" disabled selected>{f.servicePlaceholder}</option>
+          {
+            services.map((service) => (
+              <option value={service.leadValue} data-service-id={service.id}>
+                {service.copy[lang].title}
+              </option>
+            ))
+          }
+        </select>
+        <span class="field__chevron" aria-hidden="true"><Icon name="chevron-down" size={20} /></span>
+      </div>
+      <p class="field__error" id={id('service-error')} data-error={f.errors.service}></p>
+    </div>
+
+    <div class="field field--wide" data-field="message">
+      <label class="field__label" for={id('message')}>{f.message}</label>
+      <textarea
+        class="field__control field__control--area"
+        id={id('message')}
+        name="message"
+        rows="4"
+        required
+        maxlength="2000"
+        placeholder={f.messagePlaceholder}
+        aria-describedby={id('message-error')}></textarea>
+      <p class="field__error" id={id('message-error')} data-error={f.errors.message}></p>
+    </div>
+
+    <!-- Honeypot: invisible to people and assistive tech; bots tend to fill every field. -->
+    <div class="lead-form__hp" aria-hidden="true">
+      <label for={id('company')}>Company</label>
+      <input id={id('company')} name="company" type="text" tabindex="-1" autocomplete="off" />
+    </div>
+  </div>
+
+  <div class="lead-form__footer">
+    <p class="lead-form__consent">{f.consent}</p>
+    <Button type="submit" size="lg" magnetic class="lead-form__submit" data-lead-submit>{f.submit}</Button>
+  </div>
+
+  <noscript>
+    <p class="lead-form__noscript">
+      {f.noscript} <a href={site.phone.href}>{site.phone.display}</a>
+    </p>
+  </noscript>
+
+  <div class="lead-status" role="status" aria-live="polite" data-lead-status></div>
+
+  <template data-lead-template="success">
+    <div class="lead-status__panel lead-status__panel--success">
+      <span class="lead-status__icon"><Icon name="check" size={18} /></span>
+      <p>{f.success}</p>
+    </div>
+  </template>
+  <template data-lead-template="error">
+    <div class="lead-status__panel lead-status__panel--error">
+      <span class="lead-status__icon"><Icon name="close" size={18} /></span>
+      <p>{f.error} <a href={site.phone.href}>{site.phone.display}</a></p>
+    </div>
+  </template>
+</form>
+
+<style>
+  .lead-form {
+    container-type: inline-size;
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  /* ---- Head ---------------------------------------------------------------- */
+  .lead-form__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .lead-form__title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--fg-muted);
+  }
+
+  .lead-form__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ---- Fields --------------------------------------------------------------- */
+  .lead-form__fields {
+    position: relative;
+    display: grid;
+    gap: var(--space-5) var(--space-4);
+  }
+
+  .field {
+    display: grid;
+    gap: var(--space-2);
+    align-content: start;
+    min-width: 0;
+  }
+
+  .field__label {
+    font-size: var(--text-small);
+    font-weight: var(--weight-medium);
+    line-height: 1.3;
+    color: var(--fg-muted);
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .field:focus-within .field__label {
+    color: var(--fg);
+  }
+
+  .field__control {
+    width: 100%;
+    min-height: 52px;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-xs);
+    background: var(--bg);
+    color: var(--fg);
+    /* ≥16px keeps iOS Safari from zooming on focus */
+    font-size: max(1rem, 16px);
+    line-height: 1.4;
+    appearance: none;
+    transition:
+      border-color var(--dur-1) var(--ease-out),
+      box-shadow var(--dur-2) var(--ease-out),
+      background-color var(--dur-1) var(--ease-out);
+  }
+
+  .field__control::placeholder {
+    color: var(--fg-faint);
+    opacity: 1;
+  }
+
+  @media (hover: hover) {
+    .field__control:hover {
+      border-color: rgba(238, 241, 245, 0.34);
+    }
+  }
+
+  .field__control:focus,
+  .field__control:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 0;
+    border-color: var(--accent);
+    box-shadow:
+      0 0 0 1px var(--accent),
+      0 0 0 5px var(--accent-soft);
+  }
+
+  .field__control--area {
+    min-height: 8.5rem;
+    resize: vertical;
+  }
+
+  /* Select: native control, custom skin */
+  .field__select {
+    position: relative;
+  }
+
+  .field__select .field__control {
+    padding-right: 3rem;
+    cursor: pointer;
+    text-overflow: ellipsis;
+  }
+
+  .field__select select:invalid {
+    color: var(--fg-faint);
+  }
+
+  .field__select option {
+    background: var(--surface);
+    color: var(--fg);
+  }
+
+  .field__select option:disabled {
+    color: var(--fg-faint);
+  }
+
+  .field__chevron {
+    position: absolute;
+    top: 50%;
+    right: 0.9rem;
+    display: grid;
+    color: var(--fg-muted);
+    pointer-events: none;
+    transform: translateY(-50%);
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .field__select:focus-within .field__chevron {
+    color: var(--accent-text);
+  }
+
+  /* Preselected from a [data-lead-service] link elsewhere on the page (L1) */
+  .field__select::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: var(--radius-xs);
+    box-shadow:
+      0 0 0 1px var(--accent),
+      0 0 0 6px var(--accent-soft);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .field--select.is-highlight .field__control {
+    border-color: var(--accent);
+  }
+
+  .field--select.is-highlight .field__select::after {
+    animation: lead-flash 1.6s var(--ease-out) both;
+  }
+
+  @keyframes lead-flash {
+    0% {
+      opacity: 0;
+      transform: scale(1.03);
+    }
+    18% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    65% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* Errors */
+  .field__error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: var(--text-small);
+    line-height: 1.4;
+    color: var(--danger);
+  }
+
+  .field__error::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-top: 0.45em;
+    background: currentColor;
+    /* tiny hex — brand motif */
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  }
+
+  .field__error:empty {
+    display: none;
+  }
+
+  .field.is-invalid .field__control {
+    border-color: var(--danger);
+  }
+
+  .field.is-invalid .field__control:focus {
+    box-shadow:
+      0 0 0 1px var(--danger),
+      0 0 0 5px rgba(255, 122, 122, 0.14);
+  }
+
+  /* Honeypot — visually clipped, not display:none (some bots skip hidden fields) */
+  .lead-form__hp {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ---- Footer ---------------------------------------------------------------- */
+  .lead-form__footer {
+    display: grid;
+    gap: var(--space-5);
+    align-items: center;
+  }
+
+  .lead-form__consent {
+    font-size: var(--text-small);
+    line-height: 1.5;
+    color: var(--fg-faint);
+    max-width: 34rem;
+  }
+
+  .lead-form :global(.lead-form__submit) {
+    width: 100%;
+  }
+
+  /* Sending state: arrow swaps for a small spinner */
+  .lead-form :global(.lead-form__submit.is-sending .btn__icon svg) {
+    opacity: 0;
+  }
+
+  .lead-form :global(.lead-form__submit.is-sending .btn__icon) {
+    position: relative;
+  }
+
+  .lead-form :global(.lead-form__submit.is-sending .btn__icon)::after {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: lead-spin 0.8s linear infinite;
+  }
+
+  @keyframes lead-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .lead-form__noscript {
+    font-size: var(--text-small);
+    color: var(--fg-muted);
+  }
+
+  .lead-form__noscript a {
+    color: var(--fg);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ---- Status ---------------------------------------------------------------- */
+  /* Breathing room when lead-form.ts scrolls the result into view (not flush with the browser bar). */
+  .lead-status {
+    scroll-margin-block: var(--space-5);
+  }
+
+  .lead-status:empty {
+    display: none;
+  }
+
+  .lead-status :global(.lead-status__panel) {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-xs);
+    color: var(--fg);
+    line-height: 1.5;
+    animation: lead-status-in var(--dur-2) var(--ease-out) both;
+  }
+
+  .lead-status :global(.lead-status__icon) {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin-top: -2px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+  }
+
+  .lead-status :global(.lead-status__panel--success) {
+    border-color: rgba(110, 231, 183, 0.4);
+    background: rgba(110, 231, 183, 0.07);
+  }
+
+  .lead-status :global(.lead-status__panel--success .lead-status__icon) {
+    color: var(--success);
+  }
+
+  .lead-status :global(.lead-status__panel--error) {
+    border-color: rgba(255, 122, 122, 0.45);
+    background: rgba(255, 122, 122, 0.07);
+  }
+
+  .lead-status :global(.lead-status__panel--error .lead-status__icon) {
+    color: var(--danger);
+  }
+
+  .lead-status :global(a) {
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  @keyframes lead-status-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ---- Wider panel: two-up fields, inline footer ------------------------------ */
+  @container (min-width: 520px) {
+    .lead-form__fields {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field--wide {
+      grid-column: 1 / -1;
+    }
+
+    .lead-form__footer {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--space-6);
+    }
+
+    .lead-form :global(.lead-form__submit) {
+      width: auto;
+    }
+  }
+</style>
+
+<script>
+  import '@/scripts/lead-form';
+</script>

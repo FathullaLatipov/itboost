@@ -1,0 +1,305 @@
+---
+/**
+ * 08 — Contact. Final conversion point: closing headline, direct contact rows, lead form.
+ */
+import type { Lang } from '@/i18n';
+import { contact } from '@/content/contact';
+import { common } from '@/content/common';
+import { site } from '@/content/site';
+import SplitText from '@/components/ui/SplitText.astro';
+import Icon from '@/components/ui/Icon.astro';
+import LeadForm from './contact/LeadForm.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = contact[lang];
+const openMap = common[lang].footer.openMap;
+---
+
+<section id="contact" class="section has-noise contact" data-theme="dark" aria-labelledby="contact-title">
+  <div class="container">
+    <header class="contact__head">
+      <p class="contact__eyebrow t-meta" data-reveal="fade">
+        <span class="contact__index">08</span>
+        <span class="contact__rule" aria-hidden="true"></span>
+        <span>{t.eyebrow}</span>
+      </p>
+      <h2 class="contact__title" id="contact-title" data-split>
+        <SplitText text={t.title} />
+      </h2>
+    </header>
+
+    <div class="contact__grid">
+      <div class="contact__info">
+        <p class="contact__lead t-lead" data-reveal style="--i:1">{t.lead}</p>
+
+        <ul class="contact__list" role="list">
+          <li data-reveal style="--i:2">
+            <a class="contact-row" href={site.phone.href}>
+              <span class="contact-row__label t-meta">{t.details.phone}</span>
+              <span class="contact-row__value"><span class="contact-row__text">{site.phone.display}</span></span>
+              <span class="contact-row__icon" aria-hidden="true"><Icon name="arrow-up-right" size={18} /></span>
+            </a>
+          </li>
+          <li data-reveal style="--i:3">
+            <a class="contact-row" href={`mailto:${site.email}`}>
+              <span class="contact-row__label t-meta">{t.details.email}</span>
+              <span class="contact-row__value"><span class="contact-row__text">{site.email}</span></span>
+              <span class="contact-row__icon" aria-hidden="true"><Icon name="arrow-up-right" size={18} /></span>
+            </a>
+          </li>
+          <li data-reveal style="--i:4">
+            <div class="contact-row contact-row--static">
+              <span class="contact-row__label t-meta">{t.details.address}</span>
+              <span class="contact-row__value">{site.address[lang]}</span>
+              <a class="contact-row__map" href={site.mapUrl} target="_blank" rel="noopener noreferrer">
+                <span class="contact-row__map-text">{openMap}</span>
+                <Icon name="arrow-up-right" size={16} />
+                <span class="sr-only">{t.details.newTab}</span>
+              </a>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="contact__panel" data-reveal style="--i:2">
+        <LeadForm lang={lang} labelledBy="contact-title" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ---- Head ---------------------------------------------------------------- */
+  .contact__head {
+    display: grid;
+    gap: var(--space-5);
+    margin-bottom: clamp(2.25rem, 1rem + 4vw, 4.5rem);
+  }
+
+  .contact__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .contact__index {
+    color: var(--accent-text);
+  }
+
+  .contact__rule {
+    width: 2.5rem;
+    height: 1px;
+    background: var(--line-strong);
+  }
+
+  .contact__title {
+    max-width: 20ch;
+    font-size: clamp(2.4rem, 1.4rem + 4.5vw, 5.75rem);
+    line-height: 0.98;
+    letter-spacing: -0.045em;
+    font-weight: var(--weight-semibold);
+    hyphens: manual;
+  }
+
+  /* ---- Layout -------------------------------------------------------------- */
+  .contact__grid {
+    display: grid;
+    gap: clamp(3rem, 2rem + 4vw, 5rem);
+  }
+
+  .contact__info {
+    display: grid;
+    align-content: start;
+    gap: clamp(2rem, 1.5rem + 2vw, 3rem);
+  }
+
+  .contact__lead {
+    max-width: 32rem;
+  }
+
+  /* ---- Contact rows ---------------------------------------------------------- */
+  .contact__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .contact-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'label icon'
+      'value icon';
+    align-items: center;
+    row-gap: var(--space-2);
+    column-gap: var(--space-4);
+    min-height: 44px;
+    padding-block: clamp(1.1rem, 0.9rem + 0.8vw, 1.6rem);
+    border-top: 1px solid var(--line);
+  }
+
+  .contact-row__label {
+    grid-area: label;
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .contact-row__value {
+    grid-area: value;
+    min-width: 0;
+    font-size: clamp(1.25rem, 1.02rem + 1.05vw, 2rem);
+    font-weight: var(--weight-medium);
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    overflow-wrap: anywhere;
+  }
+
+  .contact-row__text {
+    background: linear-gradient(currentColor, currentColor) 0 100% / 0% 1px no-repeat;
+    padding-bottom: 0.08em;
+    transition: background-size var(--dur-2) var(--ease-out);
+  }
+
+  .contact-row__icon {
+    grid-area: icon;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    color: var(--accent-text);
+    transition:
+      background-color var(--dur-2) var(--ease-out),
+      border-color var(--dur-2) var(--ease-out),
+      color var(--dur-2) var(--ease-out);
+  }
+
+  .contact-row__icon :global(svg) {
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  a.contact-row:focus-visible {
+    outline-offset: 4px;
+  }
+
+  @media (hover: hover) {
+    a.contact-row:hover .contact-row__text {
+      background-size: 100% 1px;
+    }
+
+    a.contact-row:hover .contact-row__label {
+      color: var(--accent-text);
+    }
+
+    a.contact-row:hover .contact-row__icon {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--on-accent);
+    }
+
+    a.contact-row:hover .contact-row__icon :global(svg) {
+      transform: translate(2px, -2px);
+    }
+  }
+
+  a.contact-row:focus-visible .contact-row__text {
+    background-size: 100% 1px;
+  }
+
+  /* Address row: value + secondary map link */
+  .contact-row--static {
+    grid-template-areas:
+      'label label'
+      'value value'
+      'map map';
+  }
+
+  .contact-row__map {
+    grid-area: map;
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    margin-bottom: calc(var(--space-3) * -1);
+    color: var(--fg-muted);
+    font-size: var(--text-small);
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .contact-row__map-text {
+    background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat;
+    padding-bottom: 2px;
+    transition: background-size var(--dur-2) var(--ease-out);
+  }
+
+  .contact-row__map :global(svg) {
+    color: var(--accent-text);
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  @media (hover: hover) {
+    .contact-row__map:hover {
+      color: var(--fg);
+    }
+
+    .contact-row__map:hover :global(svg) {
+      transform: translate(2px, -2px);
+    }
+  }
+
+  /* ---- Form panel ------------------------------------------------------------ */
+  .contact__panel {
+    padding: clamp(1.25rem, 0.6rem + 2.6vw, 3rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+
+  /* Small phones: the panel runs edge to edge — full-width fields, native feel */
+  @media (max-width: 479px) {
+    .contact__panel {
+      margin-inline: calc(var(--gutter) * -1);
+      padding-inline: var(--gutter);
+      border-inline: 0;
+      border-radius: 0;
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .contact__list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: var(--gutter);
+    }
+
+    .contact__list > li:last-child {
+      grid-column: 1 / -1;
+    }
+
+    .contact-row--static {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        'label label label'
+        'value . map';
+    }
+
+    .contact-row__map {
+      margin-bottom: 0;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .contact__grid {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+      align-items: start;
+      column-gap: clamp(3rem, 0rem + 5vw, 7rem);
+    }
+  }
+</style>

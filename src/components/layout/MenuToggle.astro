@@ -1,0 +1,92 @@
+---
+/**
+ * 44×44 two-line menu icon that morphs into ×. Used twice: as the header toggle and as the
+ * close button inside the menu dialog (they overlap exactly, so the morph reads as one control).
+ * State is driven by `data-state="open" | "closed"` (set by header.ts).
+ */
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = Omit<HTMLAttributes<'button'>, 'type'>;
+
+const { class: className, ...rest } = Astro.props;
+---
+
+<button type="button" class:list={['menu-toggle', className]} data-state="closed" {...rest}>
+  <span class="menu-toggle__box" aria-hidden="true">
+    <span class="menu-toggle__line menu-toggle__line--a"></span>
+    <span class="menu-toggle__line menu-toggle__line--b"></span>
+  </span>
+</button>
+
+<style>
+  .menu-toggle {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    color: var(--fg);
+    transition:
+      border-color var(--dur-2) var(--ease-out),
+      background-color var(--dur-2) var(--ease-out);
+  }
+
+  .menu-toggle__box {
+    position: relative;
+    width: 18px;
+    height: 12px;
+  }
+
+  .menu-toggle__line {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1.5px;
+    margin-top: -0.75px;
+    border-radius: 1px;
+    background: currentColor;
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  /* Closed: two lines, the lower one shorter and right-aligned. */
+  .menu-toggle__line--a {
+    transform: translate3d(0, -3.5px, 0);
+  }
+
+  .menu-toggle__line--b {
+    transform: translate3d(3.6px, 3.5px, 0) scaleX(0.6);
+  }
+
+  @media (hover: hover) {
+    .menu-toggle:hover {
+      border-color: var(--accent);
+    }
+
+    .menu-toggle[data-state='closed']:hover .menu-toggle__line--b {
+      transform: translate3d(0, 3.5px, 0) scaleX(1);
+    }
+  }
+
+  /* Open: lines cross into ×. */
+  .menu-toggle[data-state='open'] .menu-toggle__line--a {
+    transform: rotate(45deg) scaleX(1.08);
+  }
+
+  .menu-toggle[data-state='open'] .menu-toggle__line--b {
+    transform: rotate(-45deg) scaleX(1.08);
+  }
+
+  .menu-toggle:focus-visible {
+    outline-offset: 3px;
+    border-radius: 50%;
+  }
+
+  /* Without JS the toggle cannot work — hide it (navigation stays reachable in the footer). */
+  :global(html:not(.js)) .menu-toggle {
+    display: none;
+  }
+</style>

@@ -1,0 +1,48 @@
+---
+/**
+ * Home page composition — the scroll story:
+ * Hero → About (problems → solutions) → Services → AI → Work → Stack → Process → Team → Contact.
+ * Theme rhythm: dark | light light | dark dark | light light | dark dark.
+ */
+import type { Lang } from '@/i18n';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ScrollProgress from '@/components/layout/ScrollProgress.astro';
+import Cursor from '@/components/layout/Cursor.astro';
+import Header from '@/components/layout/Header.astro';
+import Footer from '@/components/layout/Footer.astro';
+import MobileDock from '@/components/layout/MobileDock.astro';
+import Hero from '@/components/sections/Hero.astro';
+import About from '@/components/sections/About.astro';
+import Services from '@/components/sections/Services.astro';
+import AiAutomation from '@/components/sections/AiAutomation.astro';
+import Work from '@/components/sections/Work.astro';
+import Stack from '@/components/sections/Stack.astro';
+import Process from '@/components/sections/Process.astro';
+import Team from '@/components/sections/Team.astro';
+import Contact from '@/components/sections/Contact.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+---
+
+<BaseLayout lang={lang}>
+  <ScrollProgress />
+  <Cursor />
+  <Header lang={lang} />
+  <main id="main" tabindex="-1">
+    <Hero lang={lang} />
+    <About lang={lang} />
+    <Services lang={lang} />
+    <AiAutomation lang={lang} />
+    <Work lang={lang} />
+    <Stack lang={lang} />
+    <Process lang={lang} />
+    <Team lang={lang} />
+    <Contact lang={lang} />
+  </main>
+  <Footer lang={lang} band={false} />
+  <MobileDock lang={lang} />
+</BaseLayout>

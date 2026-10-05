@@ -1,0 +1,403 @@
+---
+/**
+ * Full-screen navigation dialog for < 1024px. Opened by the header toggle; behaviour
+ * (focus trap, Esc, scroll lock, close-on-navigate) lives in src/scripts/header.ts.
+ * Its top bar mirrors the header bar so the toggle → × morph reads as a single control.
+ */
+import type { Lang } from '@/i18n';
+import { anchor } from '@/i18n';
+import { common } from '@/content/common';
+import { site } from '@/content/site';
+import Logo from '@/components/ui/Logo.astro';
+import Button from '@/components/ui/Button.astro';
+import Icon from '@/components/ui/Icon.astro';
+import MenuToggle from './MenuToggle.astro';
+import LanguageSwitch from './LanguageSwitch.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = common[lang];
+const pad = (n: number): string => String(n).padStart(2, '0');
+---
+
+<div id="site-menu" class="menu" data-theme="dark" role="dialog" aria-modal="true" aria-label={t.menu.label} data-menu>
+  <div class="menu__bar container container--wide">
+    <span class="menu__logo" aria-hidden="true">
+      <Logo lang={lang} link={false} />
+    </span>
+    <MenuToggle aria-label={t.menu.close} data-menu-close />
+  </div>
+
+  <div class="menu__body container container--wide">
+    <p class="menu__meta t-meta">
+      <span>{t.menu.label}</span>
+      <span>{site.address[lang]}</span>
+    </p>
+
+    <nav class="menu__nav" aria-label={t.navLabel}>
+      <ol class="menu__list" role="list">
+        {
+          t.nav.map((item, i) => (
+            <li class="menu__item" style={`--i:${i}`}>
+              <a class="menu__link" href={anchor(lang, item.id)} data-menu-link data-nav-link={item.id}>
+                <span class="menu__num" aria-hidden="true">
+                  {pad(i + 1)}
+                </span>
+                <span class="menu__mask">
+                  <span class="menu__text">{item.label}</span>
+                </span>
+                <span class="menu__arrow" aria-hidden="true">
+                  <Icon name="arrow-right" size={22} />
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </nav>
+
+    <div class="menu__footer">
+      <div class="menu__cta">
+        <Button size="lg" href={anchor(lang, 'contact')} data-menu-link>
+          {t.navCta}
+        </Button>
+      </div>
+      <div class="menu__row">
+        <ul class="menu__contacts" role="list">
+          <li>
+            <a class="menu__contact" href={site.phone.href}>
+              <Icon name="phone" size={18} />
+              <span>{site.phone.display}</span>
+            </a>
+          </li>
+          <li>
+            <a class="menu__contact" href={`mailto:${site.email}`}>
+              <Icon name="mail" size={18} />
+              <span>{site.email}</span>
+            </a>
+          </li>
+        </ul>
+        <LanguageSwitch lang={lang} size="panel" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .menu {
+    --bar-h: 64px;
+    --menu-ease: cubic-bezier(0.76, 0, 0.24, 1);
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-menu);
+    display: flex;
+    flex-direction: column;
+    padding-right: var(--scroll-lock-gap, 0px);
+    background: var(--bg);
+    color: var(--fg);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    visibility: hidden;
+    clip-path: inset(0 0 100% 0);
+    transition:
+      clip-path 560ms var(--menu-ease),
+      visibility 0s linear 560ms;
+  }
+
+  .menu.is-open {
+    visibility: visible;
+    clip-path: inset(0 0 0 0);
+    transition:
+      clip-path 720ms var(--menu-ease),
+      visibility 0s linear 0s;
+  }
+
+  /* Never rendered at desktop widths. */
+  @media (min-width: 1024px) {
+    .menu {
+      display: none;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .menu {
+      --bar-h: var(--header-h);
+    }
+  }
+
+  /* ---- Bar (mirrors the header) ---------------------------------------- */
+  /* Sticky so the close button stays reachable when the panel scrolls (landscape phones). */
+  .menu__bar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-shrink: 0;
+    /* Mirrors the header, including its safe-area top padding. */
+    height: calc(var(--bar-h) + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    background: var(--bg);
+  }
+
+  .menu__logo {
+    display: inline-flex;
+  }
+
+  .menu__logo :global(img) {
+    width: 120px;
+  }
+
+  @media (min-width: 768px) {
+    .menu__logo :global(img) {
+      width: 136px;
+    }
+  }
+
+  /* ---- Body ------------------------------------------------------------- */
+  .menu__body {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+    padding-top: clamp(1rem, 4vh, 2.5rem);
+    padding-bottom: max(var(--space-5), env(safe-area-inset-bottom));
+  }
+
+  .menu__meta {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .menu__nav {
+    margin-bottom: var(--space-6);
+  }
+
+  .menu__item {
+    position: relative;
+  }
+
+  /* Hairline under each row — draws in from the left when the menu opens. */
+  .menu__item::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--line);
+    transform-origin: left center;
+  }
+
+  .menu__link {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 44px;
+    padding-block: clamp(0.55rem, 1.6vh, 0.95rem);
+    color: var(--fg);
+  }
+
+  .menu__num {
+    align-self: start;
+    padding-top: 0.5em;
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-meta);
+    color: var(--fg-faint);
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .menu__mask {
+    display: block;
+    overflow: hidden;
+    /* room for descenders inside the mask */
+    padding-bottom: 0.08em;
+    margin-bottom: -0.08em;
+  }
+
+  .menu__text {
+    display: block;
+    font-size: var(--text-h2);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-heading);
+    letter-spacing: var(--tracking-heading);
+    overflow-wrap: anywhere;
+  }
+
+  .menu__arrow {
+    display: inline-grid;
+    place-items: center;
+    color: var(--accent-text);
+    opacity: 0;
+    transform: translate3d(-8px, 0, 0);
+    transition:
+      opacity var(--dur-1) var(--ease-out),
+      transform var(--dur-2) var(--ease-out);
+  }
+
+  /* Outside the row (the gutter has room) so the ring never cuts through the index digits. */
+  .menu__link:focus-visible {
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  .menu__link:focus-visible .menu__arrow,
+  .menu__link:active .menu__arrow {
+    opacity: 1;
+    transform: none;
+  }
+
+  .menu__link:active .menu__num,
+  .menu__link:focus-visible .menu__num,
+  .menu__link[aria-current='true'] .menu__num {
+    color: var(--accent-text);
+  }
+
+  /* Current section (set by header.ts): accent index + a short accent rule under the row. */
+  .menu__item:has(.menu__link[aria-current='true'])::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    z-index: 1;
+    width: 2.75rem;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  @media (hover: hover) {
+    .menu__link:hover .menu__arrow {
+      opacity: 1;
+      transform: none;
+    }
+
+    .menu__link:hover .menu__num {
+      color: var(--accent-text);
+    }
+  }
+
+  /* ---- Footer area ------------------------------------------------------ */
+  .menu__footer {
+    display: grid;
+    gap: var(--space-5);
+    margin-top: auto;
+  }
+
+  .menu__cta :global(.btn) {
+    width: 100%;
+  }
+
+  .menu__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3) var(--space-5);
+  }
+
+  .menu__contacts {
+    display: grid;
+    min-width: 0;
+  }
+
+  .menu__contact {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    font-size: var(--text-small);
+    color: var(--fg-muted);
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .menu__contact :global(svg) {
+    color: var(--accent-text);
+  }
+
+  @media (hover: hover) {
+    .menu__contact:hover {
+      color: var(--fg);
+    }
+  }
+
+  @media (min-width: 640px) {
+    .menu__contacts {
+      grid-auto-flow: column;
+      gap: var(--space-6);
+    }
+  }
+
+  /* Short landscape phones: tighter type so the list stays scannable. */
+  @media (max-height: 560px) {
+    .menu__text {
+      font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+    }
+  }
+
+  /* ---- Open choreography (motion only) --------------------------------- */
+  @media (prefers-reduced-motion: no-preference) {
+    .menu__text {
+      transform: translate3d(0, 110%, 0);
+      transition: transform 600ms var(--ease-out);
+    }
+
+    .menu__num,
+    .menu__footer {
+      opacity: 0;
+    }
+
+    .menu__num {
+      transition:
+        opacity 400ms var(--ease-out),
+        color var(--dur-1) var(--ease-out);
+    }
+
+    .menu__footer {
+      transform: translate3d(0, 16px, 0);
+      transition:
+        opacity 500ms var(--ease-out),
+        transform 600ms var(--ease-out);
+    }
+
+    .menu__item::after {
+      transform: scaleX(0);
+      transition: transform 700ms var(--ease-out);
+    }
+
+    .menu.is-open .menu__text {
+      transform: none;
+      transition-delay: calc(180ms + var(--i) * 60ms);
+    }
+
+    .menu.is-open .menu__num {
+      opacity: 1;
+      transition-delay: calc(260ms + var(--i) * 60ms), 0s;
+    }
+
+    .menu.is-open .menu__item::after {
+      transform: none;
+      transition-delay: calc(140ms + var(--i) * 60ms);
+    }
+
+    .menu.is-open .menu__footer {
+      opacity: 1;
+      transform: none;
+      transition-delay: 520ms;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu,
+    .menu.is-open {
+      clip-path: none;
+    }
+  }
+</style>

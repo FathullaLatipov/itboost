@@ -1,0 +1,903 @@
+---
+/**
+ * L3 visual: "business input → AI agent → actions → result".
+ * Nodes are real HTML in reading order; wires are an aria-hidden SVG overlay whose paths are
+ * computed from node positions by src/scripts/ai-flow.ts (via src/scripts/connectors.ts).
+ * Horizontal ≥1024px, vertical (snake rails) below. Reduced motion → static, fully drawn wires.
+ */
+import type { AiCopy } from '@/content/ai';
+import BrandMark from '@/components/ui/BrandMark.astro';
+import Button from '@/components/ui/Button.astro';
+
+interface Props {
+  flow: AiCopy['flow'];
+  cta: string;
+  ctaHref: string;
+}
+
+const { flow, cta, ctaHref } = Astro.props;
+const pad = (n: number): string => String(n).padStart(2, '0');
+
+/** "CRM: создаёт сделку" → system "CRM" + action text. Falls back to the plain string. */
+const actions = flow.actions.map((action) => {
+  const at = action.indexOf(': ');
+  return at > 0 ? { system: action.slice(0, at), text: action.slice(at + 2) } : { system: '', text: action };
+});
+
+const captionWords = flow.agentCaption
+  .split('·')
+  .map((word) => word.trim())
+  .filter(Boolean);
+
+/** Flat-top hexagon (pointy left/right, as in the logo) inside a 200 × 173.2 box. */
+const hexPoints = (inset: number): string => {
+  const r = 100 - inset;
+  const h = (r * Math.sqrt(3)) / 2;
+  const cx = 100;
+  const cy = 86.6;
+  const pts: Array<[number, number]> = [
+    [cx + r, cy],
+    [cx + r / 2, cy + h],
+    [cx - r / 2, cy + h],
+    [cx - r, cy],
+    [cx - r / 2, cy - h],
+    [cx + r / 2, cy - h],
+  ];
+  return pts.map(([x, y]) => `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`).join(' ');
+};
+
+const inKeys = flow.inputs.map((_, i) => `in-${i}`);
+const outKeys = actions.map((_, i) => `out-${i}`);
+const resKeys = actions.map((_, i) => `res-${i}`);
+const packets = [
+  ...inKeys.map((key, i) => ({ key, phase: 'in', k: i })),
+  ...outKeys.map((key, i) => ({ key, phase: 'out', k: i })),
+  ...resKeys.map((key, i) => ({ key, phase: 'res', k: i })),
+];
+---
+
+<div class="flow" data-ai-flow>
+  <svg class="flow__wires" data-flow-wires aria-hidden="true" focusable="false">
+    <g class="flow__base">
+      {inKeys.map((key, i) => <path class="wire wire--in" data-wire={key} pathLength="1" style={`--k:${i}`} />)}
+      {outKeys.map((key, i) => <path class="wire wire--out" data-wire={key} pathLength="1" style={`--k:${i}`} />)}
+      {resKeys.map((key, i) => <path class="wire wire--res" data-wire={key} pathLength="1" style={`--k:${i}`} />)}
+      <path class="wire wire--cta" data-wire="cta"></path>
+    </g>
+    <g class="flow__packets">
+      {
+        packets.map((p) => (
+          <>
+            <path class={`packet-glow packet--${p.phase}`} data-wire={p.key} pathLength="1" style={`--k:${p.k}`} />
+            <path class={`packet packet--${p.phase}`} data-wire={p.key} pathLength="1" style={`--k:${p.k}`} />
+          </>
+        ))
+      }
+    </g>
+  </svg>
+
+  <p class="flow__label flow__label--in" id="ai-flow-inputs">{flow.inputsLabel}</p>
+  <ol class="flow__nodes flow__nodes--in" role="list" aria-labelledby="ai-flow-inputs">
+    {
+      flow.inputs.map((input, i) => (
+        <li class="flow-node flow-node--in" data-flow-in style={`--k:${i}`}>
+          <span class="flow-node__index" aria-hidden="true">
+            {pad(i + 1)}
+          </span>
+          <span class="flow-node__text">{input}</span>
+        </li>
+      ))
+    }
+  </ol>
+
+  <div class="flow__core" data-flow-core aria-hidden="true">
+    <span class="core__glow"></span>
+    <svg class="core__hex" viewBox="0 0 200 173.2" focusable="false">
+      <polygon class="core__fill" points={hexPoints(0)}></polygon>
+      <polygon class="core__ring core__ring--inner" points={hexPoints(14)}></polygon>
+      <polygon class="core__flash" points={hexPoints(0)}></polygon>
+      <circle class="core__port" cx="0" cy="86.6" r="3.2"></circle>
+      <circle class="core__port" cx="200" cy="86.6" r="3.2"></circle>
+    </svg>
+    <span class="core__mark">
+      <BrandMark size={72} />
+    </span>
+  </div>
+
+  <div class="flow__agent">
+    <p class="flow__agent-label">{flow.agentLabel}</p>
+    <p class="flow__agent-caption">
+      <span class="sr-only">{flow.agentCaption}</span>
+      <span class="flow__agent-steps" aria-hidden="true">
+        {
+          captionWords.map((word, i) => (
+            <span class="flow__agent-word" style={`--k:${i}`}>
+              {word}
+            </span>
+          ))
+        }
+      </span>
+    </p>
+  </div>
+
+  <p class="flow__label flow__label--out" id="ai-flow-actions">{flow.actionsLabel}</p>
+  <ol class="flow__nodes flow__nodes--out" role="list" aria-labelledby="ai-flow-actions">
+    {
+      actions.map((action, i) => (
+        <li class="flow-node flow-node--out" data-flow-out style={`--k:${i}`}>
+          {action.system && <span class="flow-node__system">{action.system}</span>}
+          <span class="flow-node__text">{action.text}</span>
+        </li>
+      ))
+    }
+  </ol>
+
+  <p class="flow__result" data-flow-result>
+    <span class="flow__result-frame" aria-hidden="true"></span>
+    <span class="flow__result-dot" aria-hidden="true"></span>
+    <span>{flow.result}</span>
+  </p>
+
+  <div class="flow__cta" data-flow-cta>
+    <Button href={ctaHref} size="lg" data-lead-service="ai" magnetic>{cta}</Button>
+  </div>
+</div>
+
+<style>
+  /* ==========================================================================
+     Layout — vertical (mobile/tablet) first, horizontal ≥1024px
+     ========================================================================== */
+  .flow {
+    --rail: 30px;
+    --core-w: clamp(124px, 30vw, 156px);
+    --cycle: 6.4s;
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'inl'
+      'in'
+      'core'
+      'agent'
+      'outl'
+      'out'
+      'res'
+      'cta';
+    padding-inline: var(--rail);
+  }
+
+  /* Tablet: the vertical diagram reads as a focused column, not a stretched list */
+  @media (min-width: 640px) and (max-width: 1023.98px) {
+    .flow {
+      max-width: 34rem;
+      margin-inline: auto;
+    }
+  }
+
+  .flow__wires {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    fill: none;
+    z-index: 0;
+  }
+
+  .flow > :not(.flow__wires) {
+    position: relative;
+    z-index: 1;
+  }
+
+  .flow__label {
+    margin-bottom: var(--space-3);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    line-height: 1.4;
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+
+  .flow__label--in {
+    grid-area: inl;
+  }
+
+  .flow__label--out {
+    grid-area: outl;
+    margin-top: var(--space-7);
+  }
+
+  .flow__nodes {
+    display: grid;
+    gap: var(--space-3);
+    padding: 0;
+    list-style: none;
+  }
+
+  .flow__nodes--in {
+    grid-area: in;
+  }
+
+  .flow__nodes--out {
+    grid-area: out;
+  }
+
+  .flow__core {
+    grid-area: core;
+    justify-self: center;
+    margin-top: var(--space-7);
+  }
+
+  .flow__agent {
+    grid-area: agent;
+    justify-self: center;
+    margin-top: var(--space-4);
+    text-align: center;
+  }
+
+  .flow__result {
+    grid-area: res;
+    justify-self: center;
+    margin-top: var(--space-7);
+  }
+
+  /* The CTA may use the rail gutters: no wire runs below the result */
+  .flow__cta {
+    grid-area: cta;
+    justify-self: center;
+    margin-top: var(--space-6);
+    margin-inline: calc(var(--rail) * -1);
+  }
+
+  @media (max-width: 767.98px) {
+    .flow__cta {
+      justify-self: stretch;
+    }
+
+    .flow__cta :global(.btn) {
+      --btn-px: 1.15rem;
+      width: 100%;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .flow {
+      --core-w: clamp(148px, 13vw, 196px);
+      grid-template-columns:
+        minmax(0, 17rem)
+        var(--core-w)
+        minmax(0, 17.5rem)
+        minmax(0, 14rem);
+      grid-template-areas:
+        'inl  .     outl .'
+        'in   core  out  res'
+        '.    agent cta  cta';
+      column-gap: clamp(2.5rem, 0.5rem + 3.4vw, 4rem);
+      justify-content: space-between;
+      align-items: center;
+      padding-inline: 0;
+    }
+
+    .flow__label--out {
+      margin-top: 0;
+    }
+
+    .flow__core,
+    .flow__result {
+      margin-top: 0;
+    }
+
+    .flow__result {
+      justify-self: stretch;
+    }
+
+    .flow__agent {
+      align-self: start;
+      margin-top: var(--space-6);
+    }
+
+    .flow__cta {
+      align-self: start;
+      justify-self: end;
+      margin-top: var(--space-6);
+      margin-inline: 0;
+    }
+  }
+
+  /* ==========================================================================
+     Nodes
+     ========================================================================== */
+  .flow-node {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 54px;
+    padding: 0.7rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-small);
+    line-height: 1.35;
+    color: var(--fg);
+  }
+
+  /* Accent frame that flashes when a packet leaves / reaches the node */
+  .flow-node::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 1px solid var(--accent);
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Ports — small sockets on the edges the wires attach to */
+  .flow-node--in::after,
+  .flow-node--out::after,
+  .flow-node--out .flow-node__text::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin-top: -3.5px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    background: var(--bg);
+  }
+
+  .flow-node--in::after,
+  .flow-node--out::after {
+    right: -4px;
+  }
+
+  .flow-node--out .flow-node__text::after {
+    left: -4px;
+  }
+
+  .flow-node__index {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-meta);
+    color: var(--fg-faint);
+  }
+
+  .flow-node--out {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.15rem;
+  }
+
+  .flow-node__system {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    color: var(--accent-text);
+  }
+
+  /* The text span is a static box so its ::after port sits on the node's left edge */
+  .flow-node--out .flow-node__text {
+    position: static;
+  }
+
+  /* ---- Core ---------------------------------------------------------------- */
+  .flow__core {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: var(--core-w);
+    aspect-ratio: 200 / 173.2;
+  }
+
+  .core__glow {
+    position: absolute;
+    inset: -45%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, var(--accent-glow), transparent 100%);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .core__hex {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .core__fill {
+    fill: var(--surface);
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .core__ring--inner {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1;
+    stroke-dasharray: 3 4;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .core__flash {
+    fill: var(--accent-soft);
+    stroke: var(--blue-300);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+    opacity: 0;
+  }
+
+  .core__port {
+    fill: var(--accent);
+  }
+
+  .core__mark {
+    position: relative;
+    width: 44%;
+  }
+
+  .core__mark :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+
+  .flow__agent-label {
+    font-size: var(--text-h4);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .flow__agent-caption {
+    margin-top: var(--space-3);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    line-height: 1.5;
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+
+  /* The agent's verbs as a short vertical sequence — no dangling separators when space is tight */
+  .flow__agent-steps {
+    display: grid;
+    justify-items: center;
+    gap: 0.35rem;
+  }
+
+  .flow__agent-word {
+    position: relative;
+    white-space: nowrap;
+  }
+
+  /* Thinking indicator — the verbs underline in turn while the agent processes */
+  .flow__agent-word::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 1px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+
+  /* ---- Result + CTA -------------------------------------------------------- */
+  .flow__result {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    max-width: 100%;
+    min-height: 54px;
+    padding: 0.75rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+    font-size: var(--text-small);
+    font-weight: var(--weight-medium);
+    line-height: 1.35;
+  }
+
+  .flow__result::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -4px;
+    width: 7px;
+    height: 7px;
+    margin-top: -3.5px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    background: var(--bg);
+  }
+
+  .flow__result-frame {
+    position: absolute;
+    inset: -1px;
+    border: 1px solid var(--accent);
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .flow__result-dot {
+    position: relative;
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+  }
+
+  .flow__result-dot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid var(--success);
+    opacity: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .flow__result {
+      border-radius: var(--radius-md);
+    }
+
+    .flow__result::after {
+      left: -4px;
+      right: auto;
+    }
+  }
+
+  /* ==========================================================================
+     Wires & packets
+     ========================================================================== */
+  /* Opaque equivalent of --line-strong: wires share rail segments, translucent strokes would stack up */
+  .wire {
+    stroke: color-mix(in srgb, var(--fg) 22%, var(--bg));
+    stroke-width: 1;
+  }
+
+  .wire--cta {
+    stroke-dasharray: 2 4;
+  }
+
+  .packet,
+  .packet-glow {
+    stroke: var(--accent);
+    stroke-linecap: round;
+    stroke-dasharray: 0.16 2;
+    stroke-dashoffset: 0.16;
+    animation: packet-in var(--cycle) var(--ease-in-out) infinite both paused;
+    animation-delay: calc(var(--k, 0) * 140ms);
+  }
+
+  .packet {
+    stroke-width: 2.25;
+  }
+
+  .packet-glow {
+    stroke-width: 8;
+    opacity: 0.28;
+  }
+
+  .packet--out {
+    animation-name: packet-out;
+  }
+
+  .packet--res {
+    animation-name: packet-res;
+  }
+
+  .flow:not(.is-live) .flow__packets {
+    visibility: hidden;
+  }
+
+  /* Draw-in of the wires on first view (JS adds .is-drawn) */
+  :global(.js) .flow .wire:not(.wire--cta) {
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 1;
+    transition: stroke-dashoffset var(--dur-4) var(--ease-out);
+  }
+
+  :global(.js) .flow .wire--in {
+    transition-delay: calc(var(--k, 0) * 90ms);
+  }
+
+  :global(.js) .flow .wire--out {
+    transition-delay: calc(350ms + var(--k, 0) * 90ms);
+  }
+
+  :global(.js) .flow .wire--res {
+    transition-delay: calc(650ms + var(--k, 0) * 90ms);
+  }
+
+  :global(.js) .flow .wire--cta {
+    opacity: 0;
+    transition: opacity var(--dur-3) var(--ease-out) 900ms;
+  }
+
+  :global(.js) .flow.is-drawn .wire {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  /* Ambient animation runs only while the diagram is on screen (.is-running) */
+  .core__glow {
+    animation: core-glow var(--cycle) var(--ease-out) infinite paused;
+  }
+
+  .core__flash {
+    animation: core-flash var(--cycle) var(--ease-out) infinite paused;
+  }
+
+  .flow__agent-word::after {
+    animation: agent-word var(--cycle) var(--ease-out) infinite paused;
+    animation-delay: calc(var(--k, 0) * 260ms);
+  }
+
+  .flow-node--in::before {
+    animation: node-send var(--cycle) var(--ease-out) infinite paused;
+    animation-delay: calc(var(--k, 0) * 140ms);
+  }
+
+  .flow-node--out::before {
+    animation: node-relay var(--cycle) var(--ease-out) infinite paused;
+    animation-delay: calc(var(--k, 0) * 140ms);
+  }
+
+  .flow__result-dot::after {
+    animation: result-ping var(--cycle) var(--ease-out) infinite paused;
+  }
+
+  .flow__result-frame {
+    animation: result-frame var(--cycle) var(--ease-out) infinite paused;
+  }
+
+  .flow.is-running .packet,
+  .flow.is-running .packet-glow,
+  .flow.is-running .core__glow,
+  .flow.is-running .core__flash,
+  .flow.is-running .flow__agent-word::after,
+  .flow.is-running .flow-node::before,
+  .flow.is-running .flow__result-dot::after,
+  .flow.is-running .flow__result-frame {
+    animation-play-state: running;
+  }
+
+  /*
+    Timeline (one cycle):
+    0–26%  packets: inputs → core      26–34% core pulse
+    30–48% agent verbs underline       46–66% packets: core → actions
+    68–86% packets: actions → result   86–100% result ping
+  */
+  @keyframes packet-in {
+    0% {
+      stroke-dashoffset: 0.16;
+    }
+    26%,
+    100% {
+      stroke-dashoffset: -1;
+    }
+  }
+
+  @keyframes packet-out {
+    0%,
+    46% {
+      stroke-dashoffset: 0.16;
+    }
+    66%,
+    100% {
+      stroke-dashoffset: -1;
+    }
+  }
+
+  @keyframes packet-res {
+    0%,
+    68% {
+      stroke-dashoffset: 0.16;
+    }
+    86%,
+    100% {
+      stroke-dashoffset: -1;
+    }
+  }
+
+  @keyframes core-glow {
+    0%,
+    24% {
+      opacity: 0.45;
+      transform: scale(1);
+    }
+    32% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+    50%,
+    100% {
+      opacity: 0.45;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes core-flash {
+    0%,
+    25% {
+      opacity: 0;
+    }
+    30% {
+      opacity: 1;
+    }
+    46%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes agent-word {
+    0%,
+    30% {
+      transform: scaleX(0);
+      opacity: 1;
+    }
+    35%,
+    56% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+    62% {
+      transform: scaleX(1);
+      opacity: 0;
+    }
+    63%,
+    100% {
+      transform: scaleX(0);
+      opacity: 0;
+    }
+  }
+
+  @keyframes node-send {
+    0% {
+      opacity: 0;
+    }
+    3% {
+      opacity: 1;
+    }
+    16%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes node-relay {
+    0%,
+    63% {
+      opacity: 0;
+    }
+    67% {
+      opacity: 1;
+    }
+    80%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes result-ping {
+    0%,
+    85% {
+      opacity: 0;
+      transform: scale(1);
+    }
+    87% {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(3.2);
+    }
+  }
+
+  @keyframes result-frame {
+    0%,
+    84% {
+      opacity: 0;
+    }
+    88% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flow__packets {
+      display: none;
+    }
+
+    :global(.js) .flow .wire:not(.wire--cta) {
+      stroke-dashoffset: 0;
+    }
+
+    :global(.js) .flow .wire--cta {
+      opacity: 1;
+    }
+  }
+
+  /* Phones: a denser column — smaller core, tighter rhythm, one-line action nodes and agent
+     verbs. Geometry still comes from the live layout, so the wires keep connecting. */
+  @media (max-width: 767.98px) {
+    .flow {
+      --rail: 26px;
+      --core-w: clamp(96px, 27vw, 116px);
+    }
+
+    .flow__label--out {
+      margin-top: var(--space-6);
+    }
+
+    .flow__core {
+      margin-top: var(--space-6);
+    }
+
+    .flow__agent {
+      margin-top: var(--space-3);
+    }
+
+    .flow__result {
+      margin-top: var(--space-6);
+    }
+
+    .flow__cta {
+      margin-top: var(--space-5);
+    }
+
+    .flow__nodes {
+      gap: var(--space-2);
+    }
+
+    .flow-node {
+      min-height: 48px;
+      padding: 0.55rem 0.9rem;
+    }
+
+    .flow-node--out {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: flex-start;
+      column-gap: var(--space-3);
+      row-gap: 0.1rem;
+      align-content: center;
+    }
+
+    .flow__agent-caption {
+      margin-top: var(--space-2);
+    }
+
+    /* verbs side by side, wrapping as whole words — still no separators to dangle */
+    .flow__agent-steps {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.3rem 1rem;
+    }
+
+    .flow__result {
+      min-height: 48px;
+      padding-block: 0.6rem;
+    }
+  }
+</style>

@@ -1,0 +1,23 @@
+---
+/**
+ * 05 — Technology ecosystem: the layers the team works across, wired to the ITBoost core.
+ */
+import type { Lang } from '@/i18n';
+import { stackSection } from '@/content/stack';
+import SectionHeading from '@/components/ui/SectionHeading.astro';
+import Ecosystem from './stack/Ecosystem.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = stackSection[lang];
+---
+
+<section id="stack" class="section" data-theme="light" aria-labelledby="stack-title">
+  <div class="container">
+    <SectionHeading index="05" eyebrow={t.eyebrow} title={t.title} lead={t.lead} id="stack-title" />
+    <Ecosystem lang={lang} />
+  </div>
+</section>

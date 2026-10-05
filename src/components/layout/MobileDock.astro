@@ -1,0 +1,257 @@
+---
+/**
+ * Mobile action dock (< 1024px): a floating ink bar with "call" + the primary "discuss project".
+ *
+ * Visibility is owned by src/scripts/mobile-dock.ts (IntersectionObserver / MutationObserver /
+ * focus events — no scroll listeners): it appears once the hero (#top) has left the viewport and
+ * gets out of the way over the contact section and footer, while the mobile menu or a <dialog> is
+ * open, and while a form field has focus (on-screen keyboard).
+ * Hidden = `visibility: hidden` + `inert`, so it is never focusable or announced. Without JS it
+ * never shows (the hero, menu and footer already carry the same actions).
+ *
+ * Widths: the call button is an icon-only circle on the narrowest phones and gains its label when
+ * the bar is wide enough for both labels on one line (thresholds per language, measured at 15px).
+ */
+import type { Lang } from '@/i18n';
+import { anchor } from '@/i18n';
+import { common } from '@/content/common';
+import { site } from '@/content/site';
+import Icon from '@/components/ui/Icon.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = common[lang].dock;
+---
+
+<div class="dock" data-theme="dark" data-dock data-lang={lang} role="region" aria-label={t.label} inert>
+  <div class="dock__bar">
+    <a class="dock__btn dock__call" href={site.phone.href} aria-label={`${t.callLabel} ${site.phone.display}`}>
+      <Icon name="phone" size={20} />
+      <span class="dock__call-text" aria-hidden="true">{t.call}</span>
+    </a>
+    <a class="dock__btn dock__cta" href={anchor(lang, 'contact')} data-dock-cta>
+      <span class="dock__cta-text">{t.cta}</span>
+      <span class="dock__cta-icon" aria-hidden="true"><Icon name="arrow-right" size={18} /></span>
+    </a>
+  </div>
+</div>
+
+<style>
+  .dock {
+    /* Outer gap to the screen edges; the safe-area insets win when they are larger. */
+    --dock-edge: 12px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-header);
+    padding: 0 max(var(--dock-edge), env(safe-area-inset-right)) max(var(--dock-edge), env(safe-area-inset-bottom))
+      max(var(--dock-edge), env(safe-area-inset-left));
+    color: var(--fg);
+    /* The full-width wrapper must never swallow taps meant for the page beside the bar. */
+    pointer-events: none;
+    visibility: hidden;
+    opacity: 0;
+    transform: translate3d(0, 110%, 0);
+    transition:
+      transform var(--dur-2) var(--ease-in-out),
+      opacity var(--dur-2) var(--ease-out),
+      visibility 0s linear var(--dur-2);
+  }
+
+  .dock.is-visible {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    transition:
+      transform 480ms var(--ease-out),
+      opacity var(--dur-2) var(--ease-out),
+      visibility 0s linear 0s;
+  }
+
+  /* Phones and tablets only; never without JS. */
+  @media (min-width: 1024px) {
+    .dock {
+      display: none;
+    }
+  }
+
+  :global(html:not(.js)) .dock {
+    display: none;
+  }
+
+  /* While the dock is up, keyboard focus scrolled into view must land above it. */
+  :global(html.is-dock-visible) {
+    scroll-padding-bottom: calc(60px + 2 * var(--dock-edge, 12px) + env(safe-area-inset-bottom));
+  }
+
+  .dock__bar {
+    container: dock / inline-size;
+    display: flex;
+    gap: 6px;
+    max-width: 480px;
+    margin-inline: auto;
+    padding: 5px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+    pointer-events: auto;
+  }
+
+  /* Landscape phones (short viewports): tighter bottom edge and the bar moves to the right — the
+     thumb's reach in a two-handed grip — so it covers ragged line ends instead of the middle of the
+     text. Its right edge lines up with the header's menu toggle (page gutter / safe area). */
+  @media (max-height: 500px) {
+    .dock {
+      --dock-edge: 8px;
+      padding-right: max(var(--gutter), env(safe-area-inset-right));
+    }
+
+    .dock__bar {
+      max-width: 420px;
+      margin-right: 0;
+    }
+  }
+
+  /* ---- Buttons ----------------------------------------------------------- */
+  .dock__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 48px;
+    border-radius: var(--radius-pill);
+    font-size: 0.9375rem;
+    font-weight: var(--weight-semibold);
+    line-height: 1.1;
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    touch-action: manipulation;
+    transition:
+      background-color var(--dur-1) var(--ease-out),
+      border-color var(--dur-1) var(--ease-out),
+      transform var(--dur-1) var(--ease-out);
+  }
+
+  .dock__btn:focus-visible {
+    outline-offset: 2px;
+    border-radius: var(--radius-pill);
+  }
+
+  /* Press feedback (touch): a quick scale, on top of the global :active dim. */
+  .dock__btn:active {
+    transform: scale(0.97);
+  }
+
+  /* Call — icon-only circle by default. */
+  .dock__call {
+    flex: none;
+    width: 48px;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    color: var(--fg);
+  }
+
+  .dock__call :global(svg) {
+    color: var(--accent-text);
+  }
+
+  .dock__call-text {
+    display: none;
+  }
+
+  /* Primary — fills the rest of the bar. */
+  .dock__cta {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 6px 0 1.1rem;
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  /* Label centred in the space left of the arrow chip. */
+  .dock__cta-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+  }
+
+  .dock__cta-icon {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    margin-left: auto;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--on-accent) 12%, transparent);
+  }
+
+  @media (hover: hover) {
+    .dock__call:hover {
+      border-color: var(--accent);
+    }
+
+    .dock__cta:hover {
+      background: var(--accent-hover);
+    }
+  }
+
+  /* Thresholds = the bar's content width at which every label still fits on one line with room
+     to breathe (measured: RU "Обсудить проект" 126px + "Позвонить" 78px; UZ CTA 181px + 73px).
+     In rem so they follow the user's font size. */
+
+  /* Labelled call button: RU from 390px phones, UZ from tablets. */
+  @container dock (min-width: 21.875rem) {
+    .dock[data-lang='ru'] .dock__call {
+      width: auto;
+      padding: 0 1.05rem 0 0.9rem;
+    }
+
+    .dock[data-lang='ru'] .dock__call-text {
+      display: inline;
+    }
+  }
+
+  @container dock (min-width: 25rem) {
+    .dock[data-lang='uz'] .dock__call {
+      width: auto;
+      padding: 0 1.05rem 0 0.9rem;
+    }
+
+    .dock[data-lang='uz'] .dock__call-text {
+      display: inline;
+    }
+  }
+
+  /* Narrowest bars: the arrow chip gives its room to the label (UZ at 320px). */
+  @container dock (max-width: 19.375rem) {
+    .dock[data-lang='uz'] .dock__cta {
+      padding-right: 1.1rem;
+    }
+
+    .dock[data-lang='uz'] .dock__cta-icon {
+      display: none;
+    }
+  }
+
+  @container dock (max-width: 16.25rem) {
+    .dock__cta {
+      padding-right: 1.1rem;
+    }
+
+    .dock__cta-icon {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  import '@/scripts/mobile-dock';
+</script>

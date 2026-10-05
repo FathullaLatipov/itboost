@@ -1,0 +1,528 @@
+---
+/**
+ * Hero — the first screen: what ITBoost does, why it matters, what to do next.
+ * Copy left (the page's only h1), L3 "hex network" canvas right, proof (stats + clients) at the base.
+ * The intro is CSS-driven so the headline (LCP) animates from first paint without waiting for JS.
+ */
+import type { Lang } from '@/i18n';
+import { anchor, plural } from '@/i18n';
+import { hero } from '@/content/hero';
+import { projects } from '@/content/projects';
+import { services } from '@/content/services';
+import { team } from '@/content/team';
+import Button from '@/components/ui/Button.astro';
+import SplitText from '@/components/ui/SplitText.astro';
+import Counter from '@/components/ui/Counter.astro';
+import HeroVisual from './hero/HeroVisual.astro';
+import ClientMarquee from './hero/ClientMarquee.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = hero[lang];
+
+/* Headline lines: continue the word stagger across lines. */
+let wordIndex = 0;
+const lines = t.title.map((line) => {
+  const startIndex = wordIndex;
+  wordIndex += line.text.split(/\s+/).filter(Boolean).length;
+  return { ...line, startIndex };
+});
+
+/*
+ * Fit guard for the display size: estimate the widest single word (in em) so the headline can
+ * shrink below the token size on very narrow screens instead of overflowing
+ * (e.g. Uzbek "tezlashtiradigan" at 320px). Estimates are deliberately a little generous.
+ */
+const charEm = (ch: string): number => {
+  if (/[A-Z]/.test(ch)) return 0.64;
+  if (/[a-z]/.test(ch)) return 0.46;
+  if (/[А-ЯЁ]/.test(ch)) return 0.72;
+  if (/[а-яё]/.test(ch)) return 0.6;
+  return 0.36;
+};
+const widestWordEm = Math.max(
+  ...t.title.flatMap((line) => line.text.split(/\s+/).map((w) => [...w].reduce((sum, ch) => sum + charEm(ch), 0))),
+);
+const fit = Math.max(4, widestWordEm).toFixed(2);
+
+const stats = [
+  { value: projects.length, suffix: '', label: plural(lang, projects.length, t.stats.projects) },
+  { value: services.length, suffix: '', label: plural(lang, services.length, t.stats.services) },
+  // "+" is honest: the team section says there are more specialists than the featured members.
+  // "N+" always reads as "more than N", so the genitive-plural form is correct in Russian.
+  { value: team.length, suffix: '+', label: t.stats.team.many },
+];
+---
+
+<section id="top" class="hero section has-noise" data-theme="dark" data-hero aria-labelledby="hero-title">
+  <HeroVisual />
+
+  <div class="hero__main container container--wide">
+    <div class="hero__content">
+      <div class="hero__meta" data-intro style="--d:0ms">
+        <p class="hero__status" data-hero-text="box">
+          <span class="hero__dot" aria-hidden="true"></span>
+          <span>{t.status}</span>
+        </p>
+        <p class="hero__eyebrow t-meta" data-hero-text>
+          <span class="hero__eyebrow-rule" aria-hidden="true"></span>
+          {t.eyebrow}
+        </p>
+      </div>
+
+      <h1 id="hero-title" class="hero__title t-display" data-split style={`--hero-fit:${fit}`}>
+        {
+          lines.map((line) => (
+            <>
+              <span class:list={['hero__line', { 'hero__line--accent': line.accent }]} data-hero-text="title">
+                <SplitText text={line.text} startIndex={line.startIndex} />
+              </span>{' '}
+            </>
+          ))
+        }
+      </h1>
+
+      <p class="hero__lead t-lead" data-hero-text data-intro style="--d:420ms">{t.lead}</p>
+
+      <div class="hero__ctas" data-hero-text data-intro style="--d:540ms">
+        <Button size="lg" magnetic href={anchor(lang, 'contact')}>{t.ctaPrimary}</Button>
+        <Button variant="secondary" size="lg" href={anchor(lang, 'work')}>{t.ctaSecondary}</Button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero__foot" data-hero-foot>
+    <div class="container container--wide">
+      <div class="hero__proof" data-intro style="--d:680ms">
+        <ul class="hero__stats" role="list">
+          {
+            stats.map((stat, i) => (
+              <li class="hero__stat">
+                <span class="hero__stat-value">
+                  <Counter value={stat.value} suffix={stat.suffix} locale={lang} delay={700 + i * 120} duration={1500} />
+                </span>
+                <span class="hero__stat-label">{stat.label}</span>
+              </li>
+            ))
+          }
+        </ul>
+
+        <a class="hero__scroll t-meta" href={anchor(lang, 'about')}>
+          <span>{t.scrollHint}</span>
+          <span class="hero__scroll-line" aria-hidden="true"></span>
+        </a>
+      </div>
+
+      <div data-intro style="--d:800ms">
+        <ClientMarquee lang={lang} />
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ---- Frame ---------------------------------------------------------------- */
+  .hero {
+    --hero-header: 72px;
+    display: flex;
+    flex-direction: column;
+    min-height: clamp(640px, 100svh, 1180px);
+    padding-block: 0;
+    overflow: clip;
+  }
+
+  /* Copy is centred in whatever height is left above the proof band; the minimum gaps keep
+     the whole hero (incl. stats + clients) inside common laptop viewports. */
+  .hero__main {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    padding-top: calc(var(--hero-header) + clamp(1.75rem, 4svh, 3.5rem));
+    padding-bottom: clamp(2rem, 4.5svh, 4rem);
+  }
+
+  .hero__content {
+    width: 100%;
+    container-type: inline-size;
+  }
+
+  /* ---- Meta: status + eyebrow ------------------------------------------------ */
+  .hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3) var(--space-5);
+    margin-bottom: clamp(1.25rem, 0.75rem + 1.6vw, 2.25rem);
+  }
+
+  .hero__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 34px;
+    padding: 0.3rem 0.95rem 0.3rem 0.8rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--bg) 60%, transparent);
+    font-size: var(--text-small);
+    line-height: 1.25;
+    color: var(--fg);
+  }
+
+  .hero__dot {
+    position: relative;
+    flex-shrink: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+  }
+
+  .hero__dot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--success);
+    animation: hero-ping 2.6s var(--ease-out) infinite;
+  }
+
+  .hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .hero__eyebrow-rule {
+    width: 2rem;
+    height: 1px;
+    background: var(--line-strong);
+  }
+
+  /* ---- Headline ------------------------------------------------------------------ */
+  .hero__title {
+    /* Token size, but never wider than the widest word allows (see --hero-fit). */
+    font-size: min(var(--text-display), calc(100cqi / var(--hero-fit, 6)));
+    color: var(--fg);
+  }
+
+  /* Desktop: also cap by viewport height so headline + proof band fit short laptop screens. */
+  @media (min-width: 1024px) {
+    .hero__title {
+      font-size: min(var(--text-display), calc(100cqi / var(--hero-fit, 6)), max(3.5rem, 10.8svh));
+    }
+  }
+
+  /* Short desktop windows (laptops minus browser chrome, ~650–820px tall): tighter type and
+     rhythm so the proof band (stats + clients) still lands on the first screen. */
+  @media (min-width: 1024px) and (max-height: 820px) {
+    .hero .hero__main {
+      padding-top: calc(var(--hero-header) + clamp(1rem, 2.5svh, 2rem));
+      padding-bottom: clamp(1.25rem, 3svh, 2rem);
+    }
+
+    .hero .hero__meta {
+      margin-bottom: clamp(0.9rem, 2.2svh, 1.5rem);
+    }
+
+    .hero .hero__title {
+      font-size: min(var(--text-display), calc(100cqi / var(--hero-fit, 6)), max(3rem, 9.4svh));
+    }
+
+    .hero .hero__lead {
+      margin-top: clamp(0.9rem, 2.2svh, 1.5rem);
+      font-size: 1.0625rem;
+    }
+
+    .hero .hero__ctas {
+      margin-top: clamp(1.1rem, 2.8svh, 1.75rem);
+    }
+
+    .hero .hero__stat {
+      padding-block: clamp(0.7rem, 1.6svh, 1rem);
+    }
+
+    .hero .hero__stat-value {
+      font-size: clamp(1.75rem, 4.6svh, 2.6rem);
+    }
+  }
+
+  .hero__line {
+    display: block;
+  }
+
+  .hero__line--accent {
+    color: var(--accent);
+  }
+
+  /* ---- Lead + CTAs ----------------------------------------------------------- */
+  .hero__lead {
+    max-width: 38rem;
+    margin-top: clamp(1.25rem, 0.9rem + 1.4vw, 2rem);
+  }
+
+  .hero__ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);
+  }
+
+  /* ---- Foot: stats + clients ----------------------------------------------------- */
+  .hero__foot {
+    position: relative;
+  }
+
+  .hero__proof {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: var(--space-6);
+    border-top: 1px solid var(--line);
+  }
+
+  .hero__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, auto));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .hero__stat {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 0.9rem;
+    padding: clamp(1rem, 0.75rem + 0.6vw, 1.35rem) clamp(1.5rem, 0.5rem + 2.6vw, 3.5rem) clamp(1rem, 0.75rem + 0.6vw, 1.35rem) 0;
+  }
+
+  .hero__stat + .hero__stat {
+    padding-left: clamp(1.5rem, 0.5rem + 2.6vw, 3.5rem);
+    border-left: 1px solid var(--line);
+  }
+
+  .hero__stat-value {
+    font-size: clamp(2rem, 1.5rem + 1.5vw, 3.25rem);
+    font-weight: var(--weight-medium);
+    letter-spacing: -0.045em;
+    line-height: 1;
+    color: var(--fg);
+  }
+
+  .hero__stat-label {
+    max-width: 13ch;
+    font-size: var(--text-small);
+    line-height: 1.3;
+    color: var(--fg-muted);
+  }
+
+  /* Scroll hint — desktop pointers only */
+  .hero__scroll {
+    display: none;
+  }
+
+  @media (min-width: 1024px) and (hover: hover) {
+    .hero__scroll {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      align-self: center;
+      min-height: 44px;
+      color: var(--fg-faint);
+      transition: color var(--dur-1) var(--ease-out);
+    }
+
+    .hero__scroll:hover {
+      color: var(--fg);
+    }
+  }
+
+  .hero__scroll-line {
+    position: relative;
+    width: 1px;
+    height: 44px;
+    overflow: hidden;
+    background: var(--line-strong);
+  }
+
+  .hero__scroll-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: translate3d(0, -100%, 0);
+    animation: hero-scroll 2.4s var(--ease-in-out) infinite;
+  }
+
+  /* ---- Intro (CSS, from first paint — no JS wait for the LCP area) ------------------ */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.js) .hero [data-intro] {
+      animation: hero-rise 1s var(--ease-out) both;
+      animation-delay: var(--d, 0ms);
+    }
+
+    :global(.js) .hero__title :global(.split-word__inner) {
+      animation: hero-word 0.8s var(--ease-out) both;
+      animation-delay: calc(90ms + var(--w, 0) * 42ms);
+    }
+  }
+
+  @keyframes hero-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 22px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes hero-word {
+    from {
+      transform: translate3d(0, 105%, 0);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes hero-ping {
+    0% {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(3);
+    }
+  }
+
+  @keyframes hero-scroll {
+    0% {
+      transform: translate3d(0, -100%, 0);
+    }
+    55% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(0, 100%, 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero__dot::after,
+    .hero__scroll-line::after {
+      display: none;
+    }
+  }
+
+  /* ---- Small screens ------------------------------------------------------------- */
+  @media (max-width: 767px) {
+    .hero {
+      --hero-header: 64px;
+      min-height: max(600px, 100svh);
+    }
+
+    .hero__main {
+      align-items: flex-start;
+    }
+
+    .hero__stats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+    }
+
+    .hero__stat {
+      grid-template-columns: minmax(0, 1fr);
+      align-content: start;
+      row-gap: 0.45rem;
+      padding-right: var(--space-3);
+    }
+
+    .hero__stat + .hero__stat {
+      padding-left: var(--space-4);
+    }
+
+    .hero__stat-label {
+      font-size: 0.8125rem;
+    }
+  }
+
+  @media (max-width: 479px) {
+    .hero__ctas {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Phones (portrait): headline, lead and both CTAs on the first screen of a 375×667 phone —
+     tighter vertical rhythm scaled by the viewport height; type stays at its token sizes. */
+  @media (max-width: 767px) {
+    .hero__main {
+      padding-top: calc(var(--hero-header) + clamp(0.75rem, 2.6svh, 1.75rem));
+      padding-bottom: clamp(1.5rem, 4svh, 2.5rem);
+    }
+
+    .hero__meta {
+      gap: var(--space-2) var(--space-4);
+      margin-bottom: clamp(0.9rem, 2.4svh, 1.5rem);
+    }
+
+    .hero__status {
+      min-height: 30px;
+      padding-block: 0.2rem;
+      font-size: 0.8125rem;
+    }
+
+    .hero__lead {
+      margin-top: clamp(0.85rem, 2.2svh, 1.25rem);
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+
+    .hero__ctas {
+      gap: 0.625rem;
+      margin-top: clamp(1.1rem, 3svh, 1.75rem);
+    }
+
+    .hero__ctas :global(.btn) {
+      --btn-h: 52px;
+    }
+  }
+
+  /* Phones / small tablets in landscape: the viewport is short, so the headline is capped by
+     the viewport height and the copy starts right under the header. */
+  @media (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
+    .hero {
+      min-height: 0;
+    }
+
+    .hero__main {
+      padding-top: calc(var(--hero-header) + 0.75rem);
+      padding-bottom: var(--space-6);
+    }
+
+    .hero__meta {
+      margin-bottom: var(--space-3);
+    }
+
+    .hero__title {
+      font-size: min(var(--text-display), calc(100cqi / var(--hero-fit, 6)), max(2.25rem, 12.5svh));
+    }
+
+    .hero__lead {
+      max-width: 34rem;
+      margin-top: var(--space-3);
+    }
+
+    .hero__ctas {
+      margin-top: var(--space-4);
+    }
+  }
+</style>

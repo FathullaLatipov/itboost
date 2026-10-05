@@ -1,0 +1,168 @@
+---
+/**
+ * Custom cursor (desktop only — fine hovering pointer and no reduced motion). Logic: src/scripts/cursor.ts.
+ * Hooks: [data-cursor="cta"] / links / buttons → ring grows; [data-cursor="view"] + data-cursor-label →
+ * blue disc with label; [data-cursor="hide"], inputs, iframes → native cursor, custom one fades out.
+ * The cursor mirrors the theme of the section under the pointer (data-theme), so it reads on ink and paper.
+ */
+---
+
+<div class="cursor" aria-hidden="true" data-theme="dark" data-state="default" data-cursor-root>
+  <div class="cursor__follower" data-cursor-follower>
+    <span class="cursor__ring"></span>
+    <span class="cursor__disc"><span class="cursor__label" data-cursor-text></span></span>
+  </div>
+  <div class="cursor__pointer" data-cursor-pointer>
+    <span class="cursor__dot"></span>
+  </div>
+</div>
+
+<style is:global>
+  /* Native cursor is hidden only while the custom one is live (class set by cursor.ts). */
+  html.has-custom-cursor,
+  html.has-custom-cursor * {
+    cursor: none !important;
+  }
+
+  html.has-custom-cursor :is(input, textarea, select, iframe, [contenteditable]:not([contenteditable='false'])),
+  html.has-custom-cursor [contenteditable]:not([contenteditable='false']) *,
+  html.has-custom-cursor [data-cursor='hide'],
+  html.has-custom-cursor [data-cursor='hide'] * {
+    cursor: auto !important;
+  }
+
+  html.has-custom-cursor [data-cursor='hide'] :is(a[href], button, label, summary, [role='button']),
+  html.has-custom-cursor [data-cursor='hide'] :is(a[href], button, label, summary, [role='button']) * {
+    cursor: pointer !important;
+  }
+</style>
+
+<style>
+  /* State variables live on the low-specificity base rule so [data-state] rules can override them. */
+  .cursor {
+    --ring-scale: 1;
+    --disc-scale: 0.3;
+    --press: 1;
+    display: none;
+  }
+
+  :global(html.has-custom-cursor) .cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: var(--z-cursor);
+    display: block;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-2) var(--ease-out);
+  }
+
+  :global(html.has-custom-cursor) .cursor.is-visible {
+    opacity: 1;
+  }
+
+  :global(html.has-custom-cursor) .cursor[data-state='hidden'] {
+    opacity: 0;
+  }
+
+  .cursor.is-pressed {
+    --press: 0.82;
+  }
+
+  .cursor__follower,
+  .cursor__pointer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    will-change: transform;
+  }
+
+  .cursor__ring,
+  .cursor__disc,
+  .cursor__dot {
+    position: absolute;
+    border-radius: 50%;
+  }
+
+  /* Ring — 36px, lags behind the pointer. */
+  .cursor__ring {
+    width: 36px;
+    height: 36px;
+    margin: -18px 0 0 -18px;
+    border: 1px solid color-mix(in srgb, var(--fg) 55%, transparent);
+    background: transparent;
+    transform: scale(calc(var(--ring-scale) * var(--press)));
+    transition:
+      transform var(--dur-2) var(--ease-out),
+      opacity var(--dur-1) var(--ease-out),
+      background-color var(--dur-2) var(--ease-out),
+      border-color var(--dur-2) var(--ease-out);
+  }
+
+  /* Dot — 6px, exactly on the pointer. */
+  .cursor__dot {
+    width: 6px;
+    height: 6px;
+    margin: -3px 0 0 -3px;
+    background: var(--fg);
+    transform: scale(var(--press));
+    transition:
+      transform var(--dur-1) var(--ease-out),
+      opacity var(--dur-1) var(--ease-out),
+      background-color var(--dur-2) var(--ease-out);
+  }
+
+  /* Disc — 88px Boost Blue with a mono label, for media ("view"). */
+  .cursor__disc {
+    display: grid;
+    place-items: center;
+    width: 88px;
+    height: 88px;
+    margin: -44px 0 0 -44px;
+    background: var(--accent);
+    color: var(--on-accent);
+    opacity: 0;
+    transform: scale(calc(var(--disc-scale) * var(--press)));
+    transition:
+      transform var(--dur-2) var(--ease-out),
+      opacity var(--dur-1) var(--ease-out);
+  }
+
+  .cursor__label {
+    max-width: 72px;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    letter-spacing: var(--tracking-meta);
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  /* States */
+  .cursor[data-state='hover'] {
+    --ring-scale: 1.556;
+  }
+
+  .cursor[data-state='hover'] .cursor__ring {
+    border-color: color-mix(in srgb, var(--fg) 70%, transparent);
+    background: color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+
+  .cursor[data-state='view'] {
+    --ring-scale: 2.4;
+    --disc-scale: 1;
+  }
+
+  .cursor[data-state='view'] .cursor__ring,
+  .cursor[data-state='view'] .cursor__dot {
+    opacity: 0;
+  }
+
+  .cursor[data-state='view'] .cursor__disc {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  import '@/scripts/cursor';
+</script>

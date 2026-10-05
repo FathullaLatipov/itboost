@@ -1,0 +1,289 @@
+---
+/**
+ * One shared native <dialog> lightbox for project screenshots.
+ * Triggers are any element with `data-lightbox` + `data-lb-*` attributes (see ./media.ts).
+ * Behaviour lives in src/scripts/lightbox.ts: lazy large image on open, Esc / backdrop close,
+ * focus return, ← → navigation (+ swipe on touch), body scroll lock.
+ */
+import type { Lang } from '@/i18n';
+import { workSection } from '@/content/projects';
+import Icon from '@/components/ui/Icon.astro';
+import BrandMark from '@/components/ui/BrandMark.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const { labels } = workSection[lang];
+---
+
+<dialog class="lightbox" aria-labelledby="lightbox-title" data-lightbox-dialog>
+  <div class="lightbox__shell" data-lb-dismiss>
+    <div class="lightbox__top" data-lb-dismiss>
+      <p class="lightbox__count t-meta" aria-hidden="true">
+        <span class="lightbox__count-current" data-lb-index>01</span>
+        <span class="lightbox__count-sep">/</span>
+        <span data-lb-total>01</span>
+      </p>
+      <button type="button" class="lightbox__btn" data-lb-close aria-label={labels.close} autofocus>
+        <Icon name="close" size={20} />
+      </button>
+    </div>
+
+    <div class="lightbox__stage" data-lb-stage data-lb-dismiss>
+      <span class="lightbox__loader" aria-hidden="true">
+        <BrandMark size={44} tone="current" />
+      </span>
+      <img class="lightbox__img" data-lb-img alt="" decoding="async" />
+    </div>
+
+    <div class="lightbox__caption">
+      <p class="lightbox__name" id="lightbox-title" data-lb-title></p>
+      <a class="lightbox__link" data-lb-link href="#" target="_blank" rel="noopener noreferrer">
+        <span data-lb-linklabel></span>
+        <Icon name="arrow-up-right" size={16} />
+        <span class="sr-only">, {labels.newTab}</span>
+      </a>
+    </div>
+
+    <div class="lightbox__nav">
+      <button type="button" class="lightbox__btn lightbox__btn--prev" data-lb-prev aria-label={labels.prev}>
+        <Icon name="arrow-right" size={20} />
+      </button>
+      <button type="button" class="lightbox__btn" data-lb-next aria-label={labels.next}>
+        <Icon name="arrow-right" size={20} />
+      </button>
+    </div>
+  </div>
+  <p class="sr-only" aria-live="polite" data-lb-status></p>
+</dialog>
+
+<script>
+  import '@/scripts/lightbox';
+</script>
+
+<style>
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--bg);
+    color: var(--fg);
+    opacity: 0;
+    overscroll-behavior: contain;
+    transition: opacity var(--dur-2) var(--ease-out);
+    cursor: default;
+  }
+
+  .lightbox::backdrop {
+    background: transparent;
+  }
+
+  .lightbox.is-open {
+    opacity: 1;
+  }
+
+  .lightbox :is(button, a) {
+    cursor: pointer;
+  }
+
+  .lightbox__shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'top top'
+      'figure figure'
+      'caption nav';
+    column-gap: var(--space-5);
+    row-gap: var(--space-4);
+    height: 100%;
+    /* viewport-fit=cover: clear the notch / rounded corners / home indicator on every side. */
+    padding: max(var(--space-4), env(safe-area-inset-top)) max(var(--gutter), env(safe-area-inset-right))
+      max(var(--space-4), env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left));
+  }
+
+  .lightbox__top {
+    grid-area: top;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .lightbox__count {
+    display: inline-flex;
+    gap: var(--space-2);
+  }
+
+  .lightbox__count-current {
+    color: var(--accent-text);
+  }
+
+  .lightbox__count-sep {
+    color: var(--line-strong);
+  }
+
+  .lightbox__stage {
+    grid-area: figure;
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    touch-action: pan-y pinch-zoom;
+  }
+
+  .lightbox__img {
+    grid-area: 1 / 1;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    box-shadow: var(--shadow-2);
+    opacity: 0;
+    transform: scale(0.97);
+    transition:
+      opacity var(--dur-2) var(--ease-out),
+      transform var(--dur-3) var(--ease-out);
+  }
+
+  .lightbox__img[data-device='phone'] {
+    border-radius: var(--radius-md);
+  }
+
+  .lightbox__stage.is-loaded .lightbox__img {
+    opacity: 1;
+    transform: none;
+  }
+
+  .lightbox__loader {
+    grid-area: 1 / 1;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity var(--dur-2) var(--ease-out);
+  }
+
+  .lightbox__stage.is-loading .lightbox__loader {
+    opacity: 0.8;
+    animation: lightbox-pulse 1.2s var(--ease-in-out) infinite;
+  }
+
+  .lightbox__stage.is-loaded .lightbox__loader {
+    opacity: 0;
+    animation: none;
+  }
+
+  @keyframes lightbox-pulse {
+    0%,
+    100% {
+      transform: scale(0.92);
+    }
+    50% {
+      transform: scale(1.04);
+    }
+  }
+
+  .lightbox__caption {
+    grid-area: caption;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-4);
+    row-gap: var(--space-1);
+    min-width: 0;
+    align-self: center;
+  }
+
+  .lightbox__name {
+    font-size: var(--text-h4);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-snug);
+  }
+
+  .lightbox__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    max-width: 100%;
+    color: var(--accent-text);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    letter-spacing: 0.04em;
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .lightbox__link > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lightbox__link :global(svg) {
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  .lightbox__link:focus-visible {
+    color: var(--fg);
+  }
+
+  /* Hover-only: on touch screens a tap would leave the state "stuck". */
+  @media (hover: hover) {
+    .lightbox__link:hover {
+      color: var(--fg);
+    }
+
+    .lightbox__link:hover :global(svg) {
+      transform: translate(2px, -2px);
+    }
+  }
+
+  .lightbox__nav {
+    grid-area: nav;
+    display: flex;
+    gap: var(--space-2);
+    align-self: center;
+  }
+
+  .lightbox__btn {
+    display: inline-grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    color: var(--fg);
+    transition:
+      background-color var(--dur-1) var(--ease-out),
+      border-color var(--dur-1) var(--ease-out),
+      color var(--dur-1) var(--ease-out);
+  }
+
+  .lightbox__btn:focus-visible {
+    border-radius: 50%;
+  }
+
+  .lightbox__btn--prev :global(svg) {
+    transform: scaleX(-1);
+  }
+
+  @media (hover: hover) {
+    .lightbox__btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--on-accent);
+    }
+  }
+</style>

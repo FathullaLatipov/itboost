@@ -1,0 +1,37 @@
+---
+/**
+ * Splits text into masked words for the headline reveal.
+ * Screen readers get the plain sentence; the animated words are aria-hidden.
+ *
+ * The *parent* element must carry `data-split` — reveal.ts adds `.is-visible` to it.
+ * Use `startIndex` to continue the stagger across several lines of one heading.
+ */
+interface Props {
+  text: string;
+  startIndex?: number;
+  class?: string;
+}
+
+const { text, startIndex = 0, class: className } = Astro.props;
+// Split on ordinary whitespace only: a no-break space (U+00A0) keeps short prepositions
+// glued to the next word ("в которой"), so they never hang at a line end.
+const words = text.split(/[ \t\n\r]+/).filter(Boolean);
+---
+
+<span class:list={['split', className]}>
+  <span class="sr-only">{text}</span>
+  <span aria-hidden="true">
+    {
+      words.map((word, i) => (
+        <>
+          <span class="split-word">
+            <span class="split-word__inner" style={`--w:${startIndex + i}`}>
+              {word}
+            </span>
+          </span>
+          {i < words.length - 1 ? ' ' : ''}
+        </>
+      ))
+    }
+  </span>
+</span>

@@ -1,0 +1,83 @@
+---
+/**
+ * 07 · Team — dark section following the light Process section.
+ * 4 cols ≥1024 · 3 ≥768 · phones: swipe carousel (SnapCarousel). Closing line is a quiet row, not a card.
+ */
+import type { Lang } from '@/i18n';
+import { team, teamSection } from '@/content/team';
+import SectionHeading from '@/components/ui/SectionHeading.astro';
+import SnapCarousel from '@/components/ui/SnapCarousel.astro';
+import MemberCard from './team/MemberCard.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = teamSection[lang];
+---
+
+<section id="team" class="section team" data-theme="dark" aria-labelledby="team-title">
+  <div class="container">
+    <SectionHeading index="07" eyebrow={t.eyebrow} title={t.title} lead={t.lead} id="team-title" />
+
+    <SnapCarousel
+      id="team-carousel"
+      label={t.carousel.label}
+      prevLabel={t.carousel.prev}
+      nextLabel={t.carousel.next}
+      roledescription={t.carousel.roledescription}
+      count={team.length}
+      slideWidth="min(clamp(14.5rem, 72vw, 20rem), 56svh)"
+    >
+      <ul class="team-grid" role="list" data-team-grid>
+        {team.map((member, i) => <MemberCard member={member} index={i} />)}
+      </ul>
+    </SnapCarousel>
+
+    <p class="team-more" data-reveal>
+      <svg class="team-more__mark" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M7 3.5h10l5 8.5-5 8.5H7L2 12Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"
+        ></path>
+        <path d="M12 8.5v7M8.5 12h7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path>
+      </svg>
+      <span>{t.more}</span>
+    </p>
+  </div>
+</section>
+
+<style>
+  /* Phones: SnapCarousel turns the list into a swipe row; the grid applies from 768px. */
+  .team-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(0.75rem, 0.4rem + 1.2vw, 1.5rem);
+  }
+
+  @media (min-width: 768px) {
+    .team-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .team-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .team-more {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: clamp(2rem, 1.5rem + 2vw, 3rem);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--line);
+    color: var(--fg-muted);
+  }
+
+  .team-more__mark {
+    flex: none;
+    color: var(--accent);
+  }
+</style>

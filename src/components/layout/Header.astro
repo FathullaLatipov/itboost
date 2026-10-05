@@ -1,0 +1,292 @@
+---
+/**
+ * Global header. Always dark. Two states driven by src/scripts/header.ts:
+ *  - at top: transparent, no rule
+ *  - scrolled (> 24px): ink glass + hairline; hides on scroll down past ~480px, returns on scroll up.
+ * Desktop (≥1024): centred nav with a sliding active-section indicator, language switch, CTA.
+ * Below 1024: logo + (language switch ≥480) + menu toggle → MobileMenu dialog.
+ */
+import type { Lang } from '@/i18n';
+import { anchor } from '@/i18n';
+import { common } from '@/content/common';
+import Logo from '@/components/ui/Logo.astro';
+import Button from '@/components/ui/Button.astro';
+import LanguageSwitch from './LanguageSwitch.astro';
+import MenuToggle from './MenuToggle.astro';
+import MobileMenu from './MobileMenu.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = common[lang];
+---
+
+<header class="site-header" data-theme="dark" data-header>
+  <div class="site-header__inner container container--wide">
+    <div class="site-header__brand">
+      <Logo lang={lang} />
+    </div>
+
+    <nav class="site-nav" aria-label={t.navLabel} data-nav>
+      <ul class="site-nav__list" role="list" data-nav-list>
+        {
+          t.nav.map((item) => (
+            <li>
+              <a class="site-nav__link" href={anchor(lang, item.id)} data-nav-link={item.id}>
+                <span class="site-nav__label">{item.label}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <span class="site-nav__indicator is-hidden" aria-hidden="true" data-nav-indicator></span>
+    </nav>
+
+    <div class="site-header__actions">
+      <div class="site-header__lang">
+        <LanguageSwitch lang={lang} />
+      </div>
+      <div class="site-header__cta">
+        <Button size="md" magnetic href={anchor(lang, 'contact')}>{t.navCta}</Button>
+      </div>
+      <div class="site-header__toggle">
+        <MenuToggle
+          aria-label={t.menu.open}
+          aria-expanded="false"
+          aria-controls="site-menu"
+          data-menu-toggle
+          data-label-open={t.menu.open}
+          data-label-close={t.menu.close}
+        />
+      </div>
+    </div>
+  </div>
+</header>
+
+<MobileMenu lang={lang} />
+
+<style>
+  .site-header {
+    --bar-h: 64px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-header);
+    /* viewport-fit=cover: in standalone / fullscreen mode the bar extends under the status bar. */
+    height: calc(var(--bar-h) + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    padding-right: var(--scroll-lock-gap, 0px);
+    color: var(--fg);
+    transform: translate3d(0, 0, 0);
+    transition: transform var(--dur-3) var(--ease-out);
+  }
+
+  @media (min-width: 768px) {
+    .site-header {
+      --bar-h: var(--header-h);
+    }
+  }
+
+  /* Glass + hairline live on pseudo layers so the state change only animates opacity. */
+  .site-header::before,
+  .site-header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-2) var(--ease-out);
+  }
+
+  .site-header::before {
+    inset-block: 0;
+    z-index: -1;
+    /* Touch / narrow screens: dense ink, no backdrop blur — re-blurring the content under a
+       fixed bar on every scroll frame is the most expensive thing a phone GPU can be asked to do. */
+    background: rgba(7, 13, 26, 0.94);
+    transition:
+      opacity var(--dur-2) var(--ease-out),
+      background-color var(--dur-2) var(--ease-out);
+  }
+
+  /* Desktop: light glass (small radius, no saturate pass) */
+  @media (min-width: 1024px) and (hover: hover) {
+    .site-header::before {
+      background: rgba(7, 13, 26, 0.8);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+  }
+
+  .site-header::after {
+    bottom: 0;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .site-header.is-scrolled::before,
+  .site-header.is-scrolled::after,
+  :global(html:not(.js)) .site-header::before,
+  :global(html:not(.js)) .site-header::after {
+    opacity: 1;
+  }
+
+  /* Over paper sections the 72% ink glass turns muddy grey — keep the bar a crisp ink.
+     Without JS the theme under the bar is unknown, so it always uses the crisp variant. */
+  .site-header.is-over-light::before,
+  :global(html:not(.js)) .site-header::before {
+    background: rgba(7, 13, 26, 0.9);
+  }
+
+  .site-header.is-hidden {
+    transform: translate3d(0, calc(-100% - 2px), 0);
+    transition-duration: var(--dur-2);
+    transition-timing-function: var(--ease-in-out);
+  }
+
+  /* ---- Layout ------------------------------------------------------------ */
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    height: 100%;
+  }
+
+  .site-header__brand {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .site-header__brand :global(img) {
+    width: 120px;
+  }
+
+  @media (min-width: 768px) {
+    .site-header__brand :global(img) {
+      width: 136px;
+    }
+  }
+
+  .site-header__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+  }
+
+  @media (min-width: 1024px) {
+    .site-header__actions {
+      gap: var(--space-4);
+    }
+  }
+
+  .site-header__lang,
+  .site-header__cta {
+    display: none;
+  }
+
+  @media (min-width: 480px) {
+    .site-header__lang {
+      display: flex;
+    }
+  }
+
+  /* ---- Desktop navigation ------------------------------------------------ */
+  .site-nav {
+    display: none;
+  }
+
+  @media (min-width: 1024px) {
+    .site-header__inner {
+      display: grid;
+      grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+      gap: var(--space-5);
+    }
+
+    .site-header__toggle {
+      display: none;
+    }
+
+    .site-header__cta {
+      display: flex;
+    }
+
+    .site-nav {
+      position: relative;
+      display: block;
+    }
+  }
+
+  .site-nav__list {
+    display: flex;
+    align-items: center;
+  }
+
+  .site-nav__link {
+    display: inline-flex;
+    align-items: center;
+    height: 44px;
+    padding-inline: clamp(0.55rem, 0.1rem + 0.7vw, 0.95rem);
+    font-size: 0.9375rem;
+    font-weight: var(--weight-medium);
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    color: var(--fg-muted);
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .site-nav__link[aria-current='true'] {
+    color: var(--fg);
+  }
+
+  @media (hover: hover) {
+    .site-nav__link:hover {
+      color: var(--fg);
+    }
+  }
+
+  .site-nav__link:focus-visible {
+    outline-offset: -2px;
+    border-radius: var(--radius-xs);
+  }
+
+  /* One indicator for the whole nav: header.ts sets translateX + scaleX (base width 100px). */
+  .site-nav__indicator {
+    position: absolute;
+    left: 0;
+    bottom: 6px;
+    width: 100px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+    pointer-events: none;
+    transition:
+      transform 480ms var(--ease-out),
+      opacity var(--dur-1) var(--ease-out);
+  }
+
+  .site-nav__indicator.is-hidden {
+    opacity: 0;
+    transition: opacity var(--dur-1) var(--ease-out);
+  }
+
+  /* CTA: drop the arrow chip on narrower desktops so the centred nav keeps its breathing room
+     (the Uzbek label is long). */
+  @media (min-width: 1024px) and (max-width: 1365px) {
+    .site-header__cta :global(.btn__icon) {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  import '@/scripts/header';
+</script>

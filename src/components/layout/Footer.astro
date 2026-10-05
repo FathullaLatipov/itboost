@@ -1,0 +1,584 @@
+---
+/**
+ * Site footer — always dark (ink-950). Structure:
+ *  1. Top band: large e-mail link (direct channel) + phone.
+ *  2. Columns: brand · navigation · services · contacts (4 ≥1024, 2 ≥768, 1 below).
+ *  3. Bottom row: © · language switch · back to top.
+ *  4. Closing gesture: a faint full-width wordmark (SVG, scales to the container — never overflows).
+ */
+import type { Lang } from '@/i18n';
+import { anchor } from '@/i18n';
+import { common } from '@/content/common';
+import { site } from '@/content/site';
+import { services } from '@/content/services';
+import Logo from '@/components/ui/Logo.astro';
+import Icon from '@/components/ui/Icon.astro';
+import BrandMark from '@/components/ui/BrandMark.astro';
+import type { IconName } from '@/components/ui/Icon.astro';
+import LanguageSwitch from './LanguageSwitch.astro';
+
+interface Props {
+  lang: Lang;
+  /**
+   * Large "write us" e-mail band at the top. Off on the home page, where the Contact section
+   * directly above already presents the same e-mail and phone.
+   */
+  band?: boolean;
+}
+
+interface SocialLink {
+  name: string;
+  href: string;
+  icon: IconName;
+}
+
+const { lang, band = true } = Astro.props;
+const t = common[lang];
+const year = new Date().getFullYear();
+
+const allSocial: SocialLink[] = [
+  { name: 'Telegram', href: site.social.telegram, icon: 'telegram' },
+  { name: 'Instagram', href: site.social.instagram, icon: 'instagram' },
+];
+const socialLinks = allSocial.filter((link) => link.href.length > 0);
+---
+
+<footer class="site-footer" data-theme="dark">
+  <div class="container container--wide">
+    <!-- 1. Top band -->
+    {band && (
+    <div class="footer-band">
+      <div class="footer-band__main">
+        <p class="footer-band__eyebrow t-meta" data-reveal="fade">
+          <BrandMark size={22} class="footer-band__mark" />
+          {t.footer.writeUs}
+        </p>
+        <a class="footer-band__mail" href={`mailto:${site.email}`} data-reveal style="--i:1">
+          <span class="footer-band__mail-text">{site.email}</span>
+          <span class="footer-band__mail-arrow" aria-hidden="true">
+            <Icon name="arrow-up-right" size={28} />
+          </span>
+        </a>
+      </div>
+      <p class="footer-band__call" data-reveal style="--i:2">
+        <span class="t-meta">{t.footer.orCall}</span>
+        <a class="f-link footer-band__phone" href={site.phone.href}>
+          <span class="f-link__text">{site.phone.display}</span>
+        </a>
+      </p>
+    </div>
+    )}
+
+    <!-- 2. Columns -->
+    <div class="footer-grid">
+      <div class="footer-col footer-col--brand">
+        <Logo lang={lang} />
+        <p class="footer-tagline">{t.footer.tagline}</p>
+        {
+          socialLinks.length > 0 && (
+            <ul class="footer-social" role="list">
+              {socialLinks.map((link) => (
+                <li>
+                  <a class="footer-social__link" href={link.href} target="_blank" rel="noopener noreferrer">
+                    <Icon name={link.icon} size={20} />
+                    <span class="sr-only">
+                      {link.name} {t.newTab}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+
+      <nav class="footer-col" aria-labelledby="footer-nav-title">
+        <h2 class="footer-col__title t-meta" id="footer-nav-title">{t.footer.navTitle}</h2>
+        <ul class="footer-list footer-list--nav" role="list">
+          {
+            t.nav.map((item) => (
+              <li>
+                <a class="f-link" href={anchor(lang, item.id)}>
+                  <span class="f-link__text">{item.label}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="footer-col">
+        <h2 class="footer-col__title t-meta">{t.footer.servicesTitle}</h2>
+        <ul class="footer-list" role="list">
+          {
+            services.map((service) => (
+              <li>
+                <a class="f-link" href={anchor(lang, 'services')}>
+                  <span class="f-link__text">{service.copy[lang].title}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h2 class="footer-col__title t-meta">{t.footer.contactTitle}</h2>
+        <ul class="footer-list" role="list">
+          <li>
+            <a class="f-link" href={site.phone.href}>
+              <span class="f-link__text">{site.phone.display}</span>
+            </a>
+          </li>
+          <li>
+            <a class="f-link" href={`mailto:${site.email}`}>
+              <span class="f-link__text">{site.email}</span>
+            </a>
+          </li>
+          <li class="footer-address">{site.address[lang]}</li>
+          <li>
+            <a class="f-link f-link--accent" href={site.mapUrl} target="_blank" rel="noopener noreferrer">
+              <span class="f-link__text">{t.footer.openMap}</span>
+              <Icon name="arrow-up-right" size={16} />
+              <span class="sr-only">{t.newTab}</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 3. Bottom row -->
+    <div class="footer-bottom">
+      <p class="footer-copy">© {year} {site.name}. {t.footer.rights}</p>
+      <div class="footer-bottom__end">
+        <LanguageSwitch lang={lang} size="panel" />
+        <a class="footer-top" href="#top">
+          <span>{t.footer.backToTop}</span>
+          <span class="footer-top__icon" aria-hidden="true"><Icon name="arrow-up" size={18} /></span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Closing wordmark -->
+  <div class="footer-mark container container--wide" aria-hidden="true">
+    <svg class="footer-mark__svg" viewBox="0 0 1000 178" focusable="false">
+      <defs>
+        <linearGradient id="footer-mark-fade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="currentColor" stop-opacity="1"></stop>
+          <stop offset="0.85" stop-color="currentColor" stop-opacity="0"></stop>
+        </linearGradient>
+      </defs>
+      <!-- x / textLength compensate the glyph side bearings so the ink spans the container exactly. -->
+      <text x="-13" y="204" textLength="1019" lengthAdjust="spacingAndGlyphs" fill="url(#footer-mark-fade)">itboost</text>
+    </svg>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    position: relative;
+    overflow: hidden;
+    /* Keep the closing wordmark clear of the home indicator (viewport-fit=cover). */
+    padding-bottom: env(safe-area-inset-bottom);
+    border-top: 1px solid var(--line);
+    background: var(--ink-950);
+    color: var(--fg);
+  }
+
+  /* ---- 1. Top band -------------------------------------------------------- */
+  .footer-band {
+    display: grid;
+    gap: var(--space-6);
+    padding-block: clamp(3.5rem, 2rem + 6vw, 7.5rem) clamp(2.5rem, 1.5rem + 4vw, 5rem);
+    border-bottom: 1px solid var(--line);
+  }
+
+  @media (min-width: 1024px) {
+    .footer-band {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+    }
+  }
+
+  .footer-band__main {
+    display: grid;
+    gap: var(--space-5);
+    min-width: 0;
+    /* The e-mail is sized against this column (cqi), so it always fits on one line. */
+    container-type: inline-size;
+  }
+
+  .footer-band__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .footer-band__eyebrow :global(.footer-band__mark) {
+    flex-shrink: 0;
+  }
+
+  .footer-band__mail {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    justify-self: start;
+    max-width: 100%;
+    padding-bottom: 0.12em;
+    /* ≈ 10.7em wide incl. the arrow → 8.8cqi keeps it inside its column at every width. */
+    font-size: clamp(1.25rem, 8.8cqi, 5.25rem);
+    font-weight: var(--weight-semibold);
+    line-height: 1.05;
+    letter-spacing: var(--tracking-display);
+    color: var(--fg);
+  }
+
+  .footer-band__mail-text {
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  /* Hairline that draws under the address on hover/focus. */
+  .footer-band__mail::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--line-strong);
+  }
+
+  .footer-band__mail::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    height: 1px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform 600ms var(--ease-out);
+  }
+
+  .footer-band__mail-arrow {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 0.9em;
+    height: 0.9em;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    color: var(--accent-text);
+    transition:
+      background-color var(--dur-2) var(--ease-out),
+      border-color var(--dur-2) var(--ease-out),
+      color var(--dur-2) var(--ease-out);
+  }
+
+  .footer-band__mail-arrow :global(svg) {
+    width: 42%;
+    height: 42%;
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  .footer-band__mail:focus-visible {
+    outline-offset: 6px;
+  }
+
+  .footer-band__mail:focus-visible::before {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+
+  @media (hover: hover) {
+    .footer-band__mail:hover::before {
+      transform: scaleX(1);
+      transform-origin: left center;
+    }
+
+    .footer-band__mail:hover .footer-band__mail-arrow {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+
+    .footer-band__mail:hover .footer-band__mail-arrow :global(svg) {
+      transform: translate(2px, -2px);
+    }
+  }
+
+  .footer-band__call {
+    display: grid;
+    gap: var(--space-1);
+    justify-items: start;
+  }
+
+  @media (min-width: 1024px) {
+    .footer-band__call {
+      justify-items: end;
+      text-align: right;
+    }
+  }
+
+  .footer-band__phone {
+    font-size: var(--text-h4);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-tight);
+    color: var(--fg);
+  }
+
+  /* ---- Shared link style: animated hairline underline (L1) --------------- */
+  .f-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 36px;
+    color: var(--fg-muted);
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .f-link__text {
+    position: relative;
+  }
+
+  .f-link__text::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  .f-link--accent {
+    color: var(--accent-text);
+  }
+
+  .f-link :global(svg) {
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  .f-link:focus-visible .f-link__text::after {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+
+  @media (hover: hover) {
+    .f-link:hover {
+      color: var(--fg);
+    }
+
+    .f-link--accent:hover {
+      color: var(--accent-text);
+    }
+
+    .f-link:hover .f-link__text::after {
+      transform: scaleX(1);
+      transform-origin: left center;
+    }
+
+    .f-link:hover :global(svg) {
+      transform: translate(2px, -2px);
+    }
+  }
+
+  @media (pointer: coarse) {
+    .f-link {
+      min-height: 44px;
+    }
+  }
+
+  /* ---- 2. Columns --------------------------------------------------------- */
+  .footer-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-7) var(--gutter);
+    padding-block: clamp(3rem, 2rem + 4vw, 5.5rem);
+  }
+
+  @media (min-width: 768px) {
+    .footer-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .footer-grid {
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1.1fr);
+    }
+  }
+
+  .footer-col {
+    display: grid;
+    align-content: start;
+    gap: var(--space-4);
+    min-width: 0;
+  }
+
+  .footer-col--brand {
+    gap: var(--space-5);
+  }
+
+  .footer-col--brand :global(.logo) {
+    justify-self: start;
+  }
+
+  .footer-tagline {
+    max-width: 30ch;
+    color: var(--fg-muted);
+  }
+
+  .footer-col__title {
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--line);
+    font-weight: var(--weight-regular);
+  }
+
+  .footer-list {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  /* Phones: the six short nav labels sit in two columns to keep the footer compact. */
+  @media (max-width: 767px) {
+    .footer-list--nav {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: var(--gutter);
+    }
+  }
+
+  .footer-address {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+    color: var(--fg-faint);
+  }
+
+  @media (pointer: coarse) {
+    .footer-address {
+      min-height: 44px;
+    }
+  }
+
+  .footer-social {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .footer-social__link {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    color: var(--fg-muted);
+    transition:
+      color var(--dur-1) var(--ease-out),
+      border-color var(--dur-2) var(--ease-out);
+  }
+
+  @media (hover: hover) {
+    .footer-social__link:hover {
+      border-color: var(--accent);
+      color: var(--fg);
+    }
+  }
+
+  /* ---- 3. Bottom row ------------------------------------------------------ */
+  .footer-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4) var(--space-6);
+    padding-block: var(--space-5);
+    border-top: 1px solid var(--line);
+  }
+
+  .footer-copy {
+    font-size: var(--text-small);
+    color: var(--fg-faint);
+  }
+
+  .footer-bottom__end {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  @media (max-width: 767px) {
+    .footer-bottom__end {
+      flex: 1 1 100%;
+      justify-content: space-between;
+    }
+  }
+
+  .footer-top {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    font-size: var(--text-small);
+    color: var(--fg-muted);
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .footer-top__icon {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    overflow: hidden;
+    transition: border-color var(--dur-2) var(--ease-out);
+  }
+
+  .footer-top__icon :global(svg) {
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  @media (hover: hover) {
+    .footer-top:hover {
+      color: var(--fg);
+    }
+
+    .footer-top:hover .footer-top__icon {
+      border-color: var(--accent);
+    }
+
+    .footer-top:hover .footer-top__icon :global(svg) {
+      transform: translateY(-3px);
+    }
+  }
+
+  /* ---- 4. Wordmark -------------------------------------------------------- */
+  .footer-mark {
+    color: var(--ink-800);
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .footer-mark__svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-top: clamp(0.5rem, 2vw, 2rem);
+  }
+
+  .footer-mark__svg text {
+    font-family: var(--font-sans);
+    font-size: 272px;
+    font-weight: var(--weight-semibold);
+  }
+</style>

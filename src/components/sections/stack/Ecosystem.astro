@@ -1,0 +1,721 @@
+---
+/**
+ * Technology ecosystem: ITBoost core + 7 layers, wired with circuit-style traces.
+ * ≥1024px: bento ring around the core (3 / 2 + core / 2), traces run through the row gutters.
+ * 768–1023px: core as a header node, layers stacked on a rail.
+ * <768px: core as a header node, layers in a swipe carousel (SnapCarousel); no traces.
+ *   (SnapCarousel is display: contents above 768px, so the desktop subgrid is unaffected.)
+ * All information is always visible; hover / tap only highlights a layer and its trace.
+ * Wires are computed by src/scripts/connectors.ts.
+ */
+import type { Lang } from '@/i18n';
+import type { LayerId } from '@/content/stack';
+import { stackLayers, stackSection } from '@/content/stack';
+import Badge from '@/components/ui/Badge.astro';
+import BrandMark from '@/components/ui/BrandMark.astro';
+import SnapCarousel from '@/components/ui/SnapCarousel.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = stackSection[lang];
+const pad = (n: number): string => String(n).padStart(2, '0');
+
+type Port = 'top' | 'right' | 'bottom' | 'left';
+
+/** Desktop placement: grid area + the card edge its trace leaves from (towards the core). */
+const placement: Record<LayerId, { area: string; port: Port }> = {
+  frontend: { area: 'l1', port: 'bottom' },
+  backend: { area: 'l2', port: 'bottom' },
+  mobile: { area: 'l3', port: 'bottom' },
+  ai: { area: 'l4', port: 'right' },
+  infra: { area: 'l5', port: 'left' },
+  integrations: { area: 'l6', port: 'top' },
+  design: { area: 'l7', port: 'top' },
+};
+
+const layers = stackLayers.map((layer, i) => ({
+  id: layer.id,
+  index: pad(i + 1),
+  copy: layer.copy[lang],
+  ...placement[layer.id],
+}));
+
+/** Ports on the core hexagon (flat-top, 200 × 173.2): traces from above enter the top edge, etc. */
+const SPREAD = 0.16;
+const spread = (n: number): number[] =>
+  n <= 1 ? [0] : Array.from({ length: n }, (_, i) => -SPREAD + (2 * SPREAD * i) / (n - 1));
+const count = (port: Port): number => layers.filter((l) => l.port === port).length;
+const corePorts = [
+  ...spread(count('bottom')).map((o) => ({ x: 100 + o * 200, y: 0 })),
+  ...spread(count('top')).map((o) => ({ x: 100 + o * 200, y: 173.2 })),
+  ...(count('right') ? [{ x: 0, y: 86.6 }] : []),
+  ...(count('left') ? [{ x: 200, y: 86.6 }] : []),
+];
+
+const hex = (inset: number): string => {
+  const r = 100 - inset;
+  const h = (r * Math.sqrt(3)) / 2;
+  const pts: Array<[number, number]> = [
+    [100 + r, 86.6],
+    [100 + r / 2, 86.6 + h],
+    [100 - r / 2, 86.6 + h],
+    [100 - r, 86.6],
+    [100 - r / 2, 86.6 - h],
+    [100 + r / 2, 86.6 - h],
+  ];
+  return pts.map(([x, y]) => `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`).join(' ');
+};
+---
+
+<div class="eco" data-eco data-spread={SPREAD}>
+  <svg class="eco__wires" data-eco-wires aria-hidden="true" focusable="false">
+    {
+      layers.map((layer, i) => (
+        <>
+          <path class="trace" data-wire={layer.id} data-trace={layer.id} pathLength="1" style={`--k:${i}`} />
+          <path class="trace-pulse" data-wire={layer.id} data-trace={layer.id} pathLength="1" />
+        </>
+      ))
+    }
+  </svg>
+
+  <div class="eco__core" aria-hidden="true">
+    <div class="core" data-eco-core>
+      <span class="core__hexbox" data-eco-hex>
+        <svg class="core__hex" viewBox="0 0 200 173.2" focusable="false">
+          <polygon class="core__fill" points={hex(0)}></polygon>
+          <polygon class="core__ring" points={hex(14)}></polygon>
+          {corePorts.map((p) => <circle class="core__port" cx={p.x} cy={p.y} r="3.4" />)}
+        </svg>
+        <span class="core__mark">
+          <BrandMark size={64} />
+        </span>
+      </span>
+      <span class="core__label">{t.core}</span>
+    </div>
+  </div>
+
+  <SnapCarousel
+    id="stack-carousel"
+    label={t.carousel.label}
+    prevLabel={t.carousel.prev}
+    nextLabel={t.carousel.next}
+    roledescription={t.carousel.roledescription}
+    count={layers.length}
+  >
+    <ul class="eco__layers" role="list">
+      {
+        layers.map((layer, i) => (
+          <li
+            class="layer"
+            data-layer={layer.id}
+            data-port={layer.port}
+            data-reveal
+            style={`--area:${layer.area};--i:${i}`}
+          >
+            <div class="layer__head">
+              <h3 class="layer__name t-h4">{layer.copy.name}</h3>
+              <span class="layer__index" aria-hidden="true">
+                {layer.index}
+              </span>
+            </div>
+            <p class="layer__caption">{layer.copy.caption}</p>
+            <ul class="layer__items" role="list">
+              {layer.copy.items.map((item, j) => (
+                <li class="layer__item" style={`--j:${j}`}>
+                  <Badge>{item}</Badge>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))
+      }
+    </ul>
+  </SnapCarousel>
+</div>
+
+<style>
+  /* ==========================================================================
+     Layout — rail list first, bento ring ≥1024px
+     ========================================================================== */
+  .eco {
+    --rail: 20px;
+    --hex-w: 44px;
+    position: relative;
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .eco__wires {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    fill: none;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .eco__core,
+  .eco__layers {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Core header node (mobile/tablet): small hexagon + label */
+  .eco__core {
+    display: flex;
+  }
+
+  .core {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .core__hexbox {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: var(--hex-w);
+    aspect-ratio: 200 / 173.2;
+  }
+
+  .core__hex {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .core__fill {
+    fill: var(--surface);
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .core__ring {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-dasharray: 3 4;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .core__port {
+    display: none;
+    fill: var(--accent);
+  }
+
+  .core__mark {
+    position: relative;
+    width: 50%;
+  }
+
+  .core__mark :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+
+  .core__label {
+    position: relative;
+    font-size: var(--text-h4);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .eco__layers {
+    display: grid;
+    gap: var(--space-3);
+    padding: 0 0 0 calc(var(--rail) * 2);
+    list-style: none;
+  }
+
+  /* ---- Layer card ------------------------------------------------------ */
+  .layer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: clamp(1.1rem, 0.8rem + 1vw, 1.5rem);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    transition:
+      border-color var(--dur-2) var(--ease-out),
+      box-shadow var(--dur-2) var(--ease-out),
+      opacity var(--dur-2) var(--ease-out),
+      transform var(--dur-2) var(--ease-out);
+  }
+
+  /* Port: the socket the trace attaches to */
+  .layer::after {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin-top: -3.5px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    background: var(--bg);
+    transition: background-color var(--dur-2) var(--ease-out);
+  }
+
+  .layer__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .layer__index {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-meta);
+    color: var(--fg-faint);
+    transition: color var(--dur-2) var(--ease-out);
+  }
+
+  .layer__caption {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    line-height: 1.5;
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+
+  .layer__items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-2) 0 0;
+    list-style: none;
+  }
+
+  .layer__items :global(.badge) {
+    white-space: normal;
+  }
+
+  /* Items stagger in after their card (L2) */
+  :global(.js) .layer__item {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+    transition:
+      opacity var(--dur-3) var(--ease-out),
+      transform var(--dur-3) var(--ease-out);
+    transition-delay: calc(var(--i, 0) * var(--stagger) + 220ms + var(--j, 0) * 55ms);
+  }
+
+  :global(.js) .layer.is-visible .layer__item {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Highlight state (hover / tap) */
+  .eco.has-active .layer:not(.is-active) {
+    opacity: 0.7;
+  }
+
+  .layer.is-active {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-1);
+  }
+
+  .layer.is-active::after {
+    background: var(--accent);
+  }
+
+  .layer.is-active .layer__index {
+    color: var(--accent-text);
+  }
+
+  /* Phones: the layers are a swipe row under the core header — the rail and ports would point
+     at cards that are off to the side, so traces are not drawn. */
+  @media (max-width: 767.98px) {
+    .eco__wires,
+    .layer::after {
+      display: none;
+    }
+
+    .eco__layers {
+      padding: 0;
+    }
+
+    .layer {
+      padding: var(--space-5);
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1023.98px) {
+    .layer {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      grid-template-areas:
+        'head  items'
+        'cap   items';
+      column-gap: var(--space-6);
+      align-items: start;
+    }
+
+    .layer__head {
+      grid-area: head;
+      justify-content: flex-start;
+    }
+
+    .layer__index {
+      order: -1;
+      min-width: 2.25rem;
+    }
+
+    .layer__caption {
+      grid-area: cap;
+    }
+
+    .layer__caption {
+      padding-left: calc(2.25rem + var(--space-3));
+    }
+
+    .layer__items {
+      grid-area: items;
+      align-self: center;
+      padding-top: 0;
+    }
+  }
+
+  /* ==========================================================================
+     Desktop bento ring
+     ========================================================================== */
+  @media (min-width: 1024px) {
+    .eco {
+      --hex-w: clamp(172px, 15vw, 224px);
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-rows: auto auto auto;
+      grid-template-areas:
+        'l1 l1 l2 l2 l3 l3'
+        'l4 l4 c  c  l5 l5'
+        'l6 l6 l6 l7 l7 l7';
+      column-gap: var(--space-5);
+      row-gap: clamp(3.5rem, 2rem + 2.4vw, 4.75rem);
+    }
+
+    .eco__layers {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-row: 1 / -1;
+      grid-template-columns: subgrid;
+      grid-template-rows: subgrid;
+      grid-template-areas: inherit;
+      padding: 0;
+      gap: inherit;
+    }
+
+    .eco__core {
+      grid-area: c;
+      align-self: center;
+      justify-self: center;
+      z-index: 2;
+    }
+
+    .core {
+      display: grid;
+      place-items: center;
+      width: var(--hex-w);
+      aspect-ratio: 200 / 173.2;
+    }
+
+    .core > * {
+      grid-area: 1 / 1;
+    }
+
+    .core__hexbox {
+      width: 100%;
+      height: 100%;
+    }
+
+    .core__port {
+      display: block;
+    }
+
+    .core__mark {
+      width: 36%;
+      margin-bottom: 14%;
+    }
+
+    .core__label {
+      margin-top: 30%;
+      font-size: var(--text-small);
+      letter-spacing: 0;
+    }
+
+    .layer {
+      grid-area: var(--area);
+      min-height: 100%;
+    }
+
+    .layer[data-port='bottom']::after {
+      top: auto;
+      bottom: -4px;
+      left: 50%;
+      margin: 0 0 0 -3.5px;
+    }
+
+    .layer[data-port='top']::after {
+      top: -4px;
+      left: 50%;
+      margin: 0 0 0 -3.5px;
+    }
+
+    .layer[data-port='right']::after {
+      left: auto;
+      right: -4px;
+    }
+
+    @media (hover: hover) {
+      .layer.is-active {
+        transform: translate3d(0, -3px, 0);
+      }
+    }
+  }
+
+  /* ==========================================================================
+     Traces
+     ========================================================================== */
+  /* Opaque equivalent of --line-strong: traces share rail segments, translucent strokes would stack up */
+  .trace {
+    stroke: color-mix(in srgb, var(--fg) 24%, var(--bg));
+    stroke-width: 1;
+    transition: stroke var(--dur-2) var(--ease-out);
+  }
+
+  .trace.is-lit {
+    stroke: var(--accent);
+    stroke-width: 1.5;
+  }
+
+  :global(.js) .eco .trace {
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 1;
+    transition:
+      stroke-dashoffset var(--dur-4) var(--ease-out) calc(var(--k, 0) * 90ms),
+      stroke var(--dur-2) var(--ease-out);
+  }
+
+  :global(.js) .eco.is-drawn .trace {
+    stroke-dashoffset: 0;
+  }
+
+  .trace-pulse {
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 0.12 2;
+    stroke-dashoffset: 0.12;
+    opacity: 0;
+  }
+
+  .trace-pulse.is-lit {
+    opacity: 1;
+    animation: trace-pulse 1.1s var(--ease-in-out) 1 both;
+  }
+
+  @keyframes trace-pulse {
+    from {
+      stroke-dashoffset: 0.12;
+    }
+    to {
+      stroke-dashoffset: -1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(.js) .eco .trace {
+      stroke-dashoffset: 0;
+    }
+
+    .trace-pulse {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  import { anchor, mountConnectors, orthogonal, pathsByKey } from '@/scripts/connectors';
+  import type { Layout, Point, Wire } from '@/scripts/connectors';
+  import { hasFinePointer, observeVisibility, prefersReducedMotion } from '@/scripts/motion';
+
+  const DESKTOP = '(min-width: 1024px)';
+  /** Phones: layers are a swipe carousel without traces (see the CSS). */
+  const PHONE = '(max-width: 767.98px)';
+  /** Wires start this far inside a card (hidden under it) so the hover lift never shows a gap. */
+  const TUCK = 10;
+  const CORNER = 12;
+
+  type Port = 'top' | 'right' | 'bottom' | 'left';
+  const isPort = (value: unknown): value is Port =>
+    value === 'top' || value === 'right' || value === 'bottom' || value === 'left';
+
+  function spread(n: number, k: number): number[] {
+    if (n <= 1) return [0];
+    return Array.from({ length: n }, (_, i) => -k + (2 * k * i) / (n - 1));
+  }
+
+  function initEcosystem(root: HTMLElement): void {
+    const svg = root.querySelector<SVGSVGElement>('[data-eco-wires]');
+    const core = root.querySelector<HTMLElement>('[data-eco-core]');
+    const hexBox = root.querySelector<HTMLElement>('[data-eco-hex]');
+    const cards = Array.from(root.querySelectorAll<HTMLElement>('[data-layer]'));
+    if (!svg || !core || !hexBox || cards.length === 0) return;
+
+    const paths = pathsByKey(svg);
+    const desktop = window.matchMedia(DESKTOP);
+    const phone = window.matchMedia(PHONE);
+    const spreadRatio = Number.parseFloat(root.dataset.spread ?? '0.16') || 0.16;
+
+    const layout: Layout = (measure) => {
+      const wires: Wire[] = [];
+      if (phone.matches) return wires;
+      const c = measure(core);
+
+      if (!desktop.matches) {
+        // Rail: from the bottom of the small header hexagon down the left edge, branching into each card.
+        const h = measure(hexBox);
+        const start = anchor(h, 'bottom');
+        const railX = start.x;
+        for (const card of cards) {
+          const box = measure(card);
+          const end = anchor(box, 'left', 0, TUCK);
+          const d = orthogonal([start, { x: railX, y: end.y }, end], CORNER);
+          wires.push({ d, paths: paths.get(card.dataset.layer ?? '') ?? [] });
+        }
+        return wires;
+      }
+
+      const k = c.width * spreadRatio;
+      const groups: Record<Port, HTMLElement[]> = { top: [], right: [], bottom: [], left: [] };
+      for (const card of cards) {
+        const port = card.dataset.port;
+        if (isPort(port)) groups[port].push(card);
+      }
+
+      const byX = (list: HTMLElement[]): HTMLElement[] =>
+        [...list].sort((a, b) => measure(a).x - measure(b).x);
+
+      // Cards above the core: down into the gutter, along it, down into the hexagon's top edge.
+      byX(groups.bottom).forEach((card, i, list) => {
+        const box = measure(card);
+        const from = anchor(box, 'bottom', 0, TUCK);
+        const to: Point = { x: c.x + c.width / 2 + (spread(list.length, k)[i] ?? 0), y: c.y };
+        const channel = (box.y + box.height + c.y) / 2;
+        const d = orthogonal([from, { x: from.x, y: channel }, { x: to.x, y: channel }, to], CORNER);
+        wires.push({ d, paths: paths.get(card.dataset.layer ?? '') ?? [] });
+      });
+
+      // Cards below the core: up into the gutter, along it, up into the hexagon's bottom edge.
+      byX(groups.top).forEach((card, i, list) => {
+        const box = measure(card);
+        const from = anchor(box, 'top', 0, TUCK);
+        const to: Point = { x: c.x + c.width / 2 + (spread(list.length, k)[i] ?? 0), y: c.y + c.height };
+        const channel = (box.y + c.y + c.height) / 2;
+        const d = orthogonal([from, { x: from.x, y: channel }, { x: to.x, y: channel }, to], CORNER);
+        wires.push({ d, paths: paths.get(card.dataset.layer ?? '') ?? [] });
+      });
+
+      // Side cards: straight into the hexagon's left / right vertex.
+      for (const card of groups.right) {
+        const box = measure(card);
+        const from = anchor(box, 'right', 0, TUCK);
+        const to = anchor(c, 'left');
+        const mid = (from.x + to.x) / 2;
+        const d = orthogonal([from, { x: mid, y: from.y }, { x: mid, y: to.y }, to], CORNER);
+        wires.push({ d, paths: paths.get(card.dataset.layer ?? '') ?? [] });
+      }
+      for (const card of groups.left) {
+        const box = measure(card);
+        const from = anchor(box, 'left', 0, TUCK);
+        const to = anchor(c, 'right');
+        const mid = (from.x + to.x) / 2;
+        const d = orthogonal([from, { x: mid, y: from.y }, { x: mid, y: to.y }, to], CORNER);
+        wires.push({ d, paths: paths.get(card.dataset.layer ?? '') ?? [] });
+      }
+      return wires;
+    };
+
+    const connectors = mountConnectors(root, svg, layout, [core, ...cards]);
+    desktop.addEventListener('change', () => connectors.update());
+    phone.addEventListener('change', () => {
+      if (phone.matches) setActive(null);
+      connectors.update();
+    });
+
+    // ---- Draw-in on first view -------------------------------------------
+    if (prefersReducedMotion()) {
+      root.classList.add('is-drawn');
+    } else {
+      const io = observeVisibility(
+        root,
+        (visible) => {
+          if (!visible) return;
+          root.classList.add('is-drawn');
+          io.disconnect();
+        },
+        '0px 0px -15% 0px',
+      );
+    }
+
+    // ---- Highlight a layer and its trace (hover on desktop, tap on touch) --
+    let active: string | null = null;
+
+    const setActive = (id: string | null): void => {
+      if (id === active) return;
+      active = id;
+      root.classList.toggle('has-active', id !== null);
+      for (const card of cards) card.classList.toggle('is-active', card.dataset.layer === id);
+      svg.querySelectorAll<SVGPathElement>('[data-trace]').forEach((path) => {
+        const lit = path.dataset.trace === id;
+        if (path.classList.contains('trace-pulse')) {
+          // restart the one-shot pulse
+          path.classList.remove('is-lit');
+          if (lit && !prefersReducedMotion()) {
+            void path.getBoundingClientRect();
+            path.classList.add('is-lit');
+          }
+        } else {
+          path.classList.toggle('is-lit', lit);
+        }
+      });
+    };
+
+    for (const card of cards) {
+      const id = card.dataset.layer ?? null;
+      card.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'mouse' && hasFinePointer()) setActive(id);
+      });
+      card.addEventListener('pointerleave', (event) => {
+        if (event.pointerType === 'mouse') setActive(null);
+      });
+      card.addEventListener('click', () => {
+        // Tap-to-highlight lights a trace — there are none in the phone carousel.
+        if (!hasFinePointer() && !phone.matches) setActive(active === id ? null : id);
+      });
+    }
+
+    document.addEventListener('pointerdown', (event) => {
+      if (hasFinePointer() || active === null) return;
+      if (event.target instanceof Node && root.contains(event.target)) return;
+      setActive(null);
+    });
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-eco]').forEach(initEcosystem);
+</script>

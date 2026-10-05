@@ -1,0 +1,266 @@
+---
+/**
+ * Presentation frame for project screenshots.
+ * - device "desktop": refined browser chrome (three dots + mono URL).
+ * - device "phone": slim phone shell centered on a --surface stage.
+ *
+ * fit "ratio" + shotRatio (case studies): the screenshot is fitted to the frame WIDTH, so logos
+ *   and navigation at the page edges are never cropped. The view is cut ~10% short at the bottom;
+ *   that vertical slack is what `src/scripts/work.ts` uses for the in-frame parallax.
+ * fit "ratio" without shotRatio: 16/10 view, cover.
+ * fit "fill" (project cards): the frame fills the box its parent sizes — keeps the grid even.
+ * Slot: the <Picture>.
+ */
+import type { ProjectDevice } from '@/content/projects';
+
+interface Props {
+  device: ProjectDevice;
+  /** Mono URL label shown in the browser bar. */
+  label: string;
+  fit?: 'ratio' | 'fill';
+  size?: 'lg' | 'sm';
+  /** Natural width / height of the screenshot — enables the width-fit mode. */
+  shotRatio?: number;
+  /** Marks the image layer for the scroll parallax (work.ts). Needs shotRatio. */
+  parallax?: boolean;
+  class?: string;
+}
+
+const { device, label, fit = 'ratio', size = 'sm', shotRatio, parallax = false, class: className } = Astro.props;
+
+const widthFit = device === 'desktop' && fit === 'ratio' && shotRatio !== undefined && shotRatio > 0;
+/** Hide ~10% of the screenshot height; never narrower than 16/10, never wider than the image needs. */
+const viewRatio = widthFit && shotRatio ? Math.min(Math.max(shotRatio / 0.9, 1.6), Math.max(2.3, shotRatio)) : 1.6;
+const style = widthFit ? `--view-ratio:${viewRatio.toFixed(4)}` : undefined;
+---
+
+<div
+  class:list={['frame', `frame--${device}`, `frame--${fit}`, `frame--${size}`, { 'frame--width': widthFit }, className]}
+  style={style}
+>
+  {
+    device === 'desktop' ? (
+      <>
+        <div class="frame__bar" aria-hidden="true">
+          <span class="frame__dots">
+            <i />
+            <i />
+            <i />
+          </span>
+          <span class="frame__url">{label}</span>
+          <span />
+        </div>
+        <div class="frame__view">
+          <div class="frame__shift" data-parallax={parallax && widthFit ? '' : undefined}>
+            <div class="frame__media">
+              <slot />
+            </div>
+          </div>
+        </div>
+      </>
+    ) : (
+      <div class="frame__stage">
+        <div class="frame__phone">
+          <div class="frame__screen">
+            <div class="frame__media">
+              <slot />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .frame {
+    --frame-radius: var(--radius-sm);
+    --bar-h: 30px;
+    --dot: 6px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: var(--frame-radius);
+    background: var(--surface);
+    overflow: hidden;
+    /* keeps the rounded clip crisp while children transform */
+    isolation: isolate;
+    transform: translateZ(0);
+  }
+
+  .frame--lg {
+    --frame-radius: var(--radius-md);
+    --bar-h: clamp(32px, 1.6rem + 0.6vw, 42px);
+    --dot: clamp(7px, 0.35rem + 0.15vw, 9px);
+  }
+
+  .frame--fill {
+    height: 100%;
+  }
+
+  /* ---- Browser chrome ---------------------------------------------------- */
+  .frame__bar {
+    display: grid;
+    grid-template-columns: 1fr minmax(0, auto) 1fr;
+    align-items: center;
+    gap: var(--space-3);
+    flex: none;
+    height: var(--bar-h);
+    padding-inline: calc(var(--bar-h) * 0.38);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-elevated);
+  }
+
+  .frame__dots {
+    display: inline-flex;
+    gap: calc(var(--dot) * 0.85);
+  }
+
+  .frame__dots i {
+    width: var(--dot);
+    height: var(--dot);
+    border-radius: 50%;
+    background: var(--line-strong);
+  }
+
+  .frame__url {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0.2em 1.1em;
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--fg-faint);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .frame--lg .frame__url {
+    font-size: 0.75rem;
+    padding-inline: 1.6em;
+  }
+
+  .frame__view {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-2);
+  }
+
+  .frame--ratio .frame__view {
+    aspect-ratio: 16 / 10;
+  }
+
+  .frame--width .frame__view {
+    aspect-ratio: var(--view-ratio);
+  }
+
+  .frame--fill .frame__view {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .frame__shift {
+    position: absolute;
+    inset: 0;
+  }
+
+  .frame__media,
+  .frame__media :global(picture) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .frame__media :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 0;
+  }
+
+  /* Width-fit: the layer takes the screenshot's natural height (taller than the view) */
+  .frame--width .frame__shift {
+    bottom: auto;
+  }
+
+  /* Only where work.ts runs the parallax */
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .frame__shift[data-parallax] {
+      will-change: transform;
+    }
+  }
+
+  .frame--width .frame__media,
+  .frame--width .frame__media :global(picture),
+  .frame--width .frame__media :global(img) {
+    height: auto;
+  }
+
+  /* ---- Phone on a stage ---------------------------------------------------- */
+  .frame__stage {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    background:
+      radial-gradient(circle at 50% 55%, var(--accent-soft), transparent 62%),
+      var(--surface);
+  }
+
+  /* Engineering dot lattice behind the phone */
+  .frame__stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(var(--line-strong) 1px, transparent 1.2px);
+    background-size: 18px 18px;
+    background-position: center;
+    mask-image: radial-gradient(ellipse 70% 80% at 50% 50%, #000 20%, transparent 75%);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .frame--ratio .frame__stage {
+    aspect-ratio: 16 / 10;
+    flex: none;
+  }
+
+  /* Absolutely centred so its height is a definite share of the stage (keeps every card even) */
+  .frame__phone {
+    position: absolute;
+    top: 8%;
+    left: 50%;
+    height: 84%;
+    aspect-ratio: 9 / 16;
+    transform: translateX(-50%);
+    padding: 4px;
+    border: 1px solid var(--line-strong);
+    border-radius: 18px;
+    background: var(--bg);
+    box-shadow: var(--shadow-1);
+  }
+
+  .frame--lg .frame__phone {
+    padding: 6px;
+    border-radius: 30px;
+  }
+
+  .frame__screen {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--surface-2);
+  }
+
+  .frame--lg .frame__screen {
+    border-radius: 24px;
+  }
+</style>

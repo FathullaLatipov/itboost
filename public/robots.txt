@@ -1,0 +1,6 @@
+# https://itboost.uz
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://itboost.uz/sitemap-index.xml

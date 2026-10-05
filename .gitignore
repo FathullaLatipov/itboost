@@ -1,0 +1,21 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+
+# environment (contains the lead-form bot token)
+.env
+.env.*
+!.env.example
+
+# QA artifacts / logs
+.qa/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json

@@ -1,0 +1,278 @@
+---
+/**
+ * Trust strip: infinite marquee of client wordmarks (from the real project list).
+ * - CSS transform animation on a duplicated track; the copy is aria-hidden.
+ * - Pauses on hover and via an explicit toggle (keyboard / WCAG 2.2.2).
+ * - Reduced motion: static wrapped list, no toggle.
+ */
+import type { Lang } from '@/i18n';
+import { hero } from '@/content/hero';
+import { clientNames } from '@/content/projects';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = hero[lang];
+const names = clientNames;
+const copies = [false, true] as const;
+---
+
+<div class="clients" data-clients>
+  <p class="clients__label t-meta" id="hero-clients-label">{t.clientsLabel}</p>
+  <div class="clients__viewport" role="group" aria-labelledby="hero-clients-label">
+    <div class="clients__track" style={`--count:${names.length}`}>
+      {
+        copies.map((isCopy) => (
+          <ul class="clients__list" role="list" aria-hidden={isCopy ? 'true' : undefined}>
+            {names.map((name) => (
+              <li class="clients__item">
+                <span class="clients__name">{name}</span>
+                <svg class="clients__sep" viewBox="0 0 12 10.4" width="15" height="13" aria-hidden="true" focusable="false">
+                  <path d="M3.2.35h5.6l2.8 4.85-2.8 4.85H3.2L.4 5.2Z" />
+                </svg>
+              </li>
+            ))}
+          </ul>
+        ))
+      }
+    </div>
+  </div>
+  <button class="clients__toggle" type="button" aria-pressed="false" aria-label={t.clientsPause} data-clients-toggle>
+    <span class="clients__toggle-icon" aria-hidden="true"></span>
+  </button>
+</div>
+
+<style>
+  .clients {
+    --clients-gap: clamp(1.25rem, 0.8rem + 1.6vw, 2.5rem);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'label viewport toggle';
+    align-items: center;
+    column-gap: clamp(1.25rem, 0.5rem + 2vw, 2.5rem);
+    min-height: 68px;
+    border-top: 1px solid var(--line);
+  }
+
+  .clients__label {
+    grid-area: label;
+    white-space: nowrap;
+  }
+
+  .clients__viewport {
+    grid-area: viewport;
+    min-width: 0;
+    overflow: hidden;
+    padding-block: var(--space-4);
+    mask-image: linear-gradient(90deg, transparent 0, #000 9%, #000 91%, transparent 100%);
+  }
+
+  .clients__track {
+    display: flex;
+    width: max-content;
+  }
+
+  /* Moves only when the pause toggle can work (JS) — without JS it is a static strip (WCAG 2.2.2). */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.js) .clients__track {
+      animation: clients-marquee calc(var(--count, 16) * 3.4s) linear infinite;
+    }
+  }
+
+  .clients:global([data-paused]) .clients__track {
+    animation-play-state: paused;
+  }
+
+  /* Pause-on-hover for mouse users only: on touch a tap would "stick" the strip paused. */
+  @media (hover: hover) {
+    .clients__viewport:hover .clients__track {
+      animation-play-state: paused;
+    }
+  }
+
+  .clients__list {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .clients__item {
+    display: flex;
+    align-items: center;
+    gap: var(--clients-gap);
+    padding-right: var(--clients-gap);
+  }
+
+  .clients__name {
+    font-size: clamp(1.05rem, 0.92rem + 0.55vw, 1.4rem);
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--fg-muted);
+    transition: color var(--dur-2) var(--ease-out);
+  }
+
+  @media (hover: hover) {
+    .clients__name:hover {
+      color: var(--fg);
+    }
+  }
+
+  .clients__sep {
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--fg-faint);
+    stroke-width: 1.1;
+    opacity: 0.55;
+  }
+
+  /* Pause / play toggle */
+  .clients__toggle {
+    grid-area: toggle;
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-right: -6px;
+    position: relative;
+    border-radius: 50%;
+    color: var(--fg-faint);
+    transition: color var(--dur-1) var(--ease-out);
+  }
+
+  .clients__toggle::before {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    transition: border-color var(--dur-1) var(--ease-out);
+  }
+
+  .clients__toggle-icon {
+    position: relative;
+    width: 8px;
+    height: 9px;
+    /* pause: two bars */
+    background:
+      linear-gradient(currentColor, currentColor) left / 2px 100% no-repeat,
+      linear-gradient(currentColor, currentColor) right / 2px 100% no-repeat;
+  }
+
+  .clients__toggle[aria-pressed='true'] .clients__toggle-icon {
+    /* play: triangle */
+    width: 8px;
+    height: 10px;
+    margin-left: 2px;
+    background: currentColor;
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+
+  @media (hover: hover) {
+    .clients__toggle:hover {
+      color: var(--fg);
+    }
+
+    .clients__toggle:hover::before {
+      border-color: var(--accent);
+    }
+  }
+
+  .clients__toggle:focus-visible {
+    outline-offset: -4px;
+    border-radius: 50%;
+  }
+
+  /* Without JS the toggle cannot work (and the strip does not move) — hide it. */
+  :global(html:not(.js)) .clients__toggle {
+    display: none;
+  }
+
+  @keyframes clients-marquee {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .clients {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'label toggle'
+        'viewport viewport';
+      padding-top: var(--space-2);
+    }
+
+    .clients__viewport {
+      padding-block: var(--space-2) var(--space-5);
+      mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+    }
+  }
+
+  /* Reduced motion: a calm, static wrapped list. */
+  @media (prefers-reduced-motion: reduce) {
+    .clients {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas: 'label viewport';
+      /* label sits on the first row of the wrapped list */
+      align-items: baseline;
+    }
+
+    .clients__toggle {
+      display: none;
+    }
+
+    .clients__viewport {
+      mask-image: none;
+    }
+
+    .clients__track {
+      width: auto;
+      animation: none;
+    }
+
+    .clients__list {
+      flex-wrap: wrap;
+      flex-shrink: 1;
+      row-gap: var(--space-2);
+    }
+
+    .clients__list[aria-hidden='true'] {
+      display: none;
+    }
+
+    .clients__item:last-child .clients__sep {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) and (max-width: 767px) {
+    .clients {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'label'
+        'viewport';
+    }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-clients]').forEach((root) => {
+    const toggle = root.querySelector<HTMLButtonElement>('[data-clients-toggle]');
+    toggle?.addEventListener('click', () => {
+      const paused = toggle.getAttribute('aria-pressed') !== 'true';
+      toggle.setAttribute('aria-pressed', String(paused));
+      root.toggleAttribute('data-paused', paused);
+    });
+  });
+</script>

@@ -1,0 +1,36 @@
+---
+/**
+ * ITBoost brand mark (hexagon + code chevrons) redrawn as SVG from the logo.
+ * Use for favicon-like marks, decorative nodes and the AI/stack visuals.
+ * Colour follows `currentColor` unless `tone="brand"`.
+ */
+interface Props {
+  size?: number;
+  tone?: 'brand' | 'current';
+  class?: string;
+  title?: string;
+}
+
+const { size = 40, tone = 'brand', class: className, title } = Astro.props;
+const fill = tone === 'brand' ? '#48AAFF' : 'currentColor';
+const height = Math.round((size * 336) / 597);
+---
+
+<svg
+  class:list={['brand-mark', className]}
+  width={size}
+  height={height}
+  viewBox="55 52 597 336"
+  fill={fill}
+  role={title ? 'img' : undefined}
+  aria-hidden={title ? undefined : 'true'}
+  aria-label={title}
+  focusable="false"
+>
+  <path d="M143 75 173 127 119 220 173 313 143 365 60 220Z" />
+  <path d="M563 75 647 220 563 365 533 313 587 220 533 127Z" />
+  <path
+    fill-rule="evenodd"
+    d="M260 58H447L540 220 447 382H260L167 220ZM289 111H416L479 220 416 329H289L227 220ZM265 68H440L428 89H277ZM277 351H428L440 372H265Z"
+  />
+</svg>

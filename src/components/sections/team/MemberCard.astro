@@ -1,0 +1,182 @@
+---
+/**
+ * Team member card: 4/5 portrait in a hairline frame. Desaturated at rest via a neutral
+ * `mix-blend-mode: saturation` layer (so the colour change animates opacity only), full colour
+ * on hover / focus-within — and, on touch screens, while the card crosses the viewport centre
+ * (`.is-active`, set by the Team section script).
+ */
+import { Picture } from 'astro:assets';
+import type { TeamMember } from '@/content/team';
+import { portraitStyle } from './portraits';
+
+interface Props {
+  member: TeamMember;
+  index: number;
+}
+
+const { member, index } = Astro.props;
+---
+
+<li class="member" data-reveal style={`--i:${index}`} data-member>
+  <figure class="member__figure">
+    <div class="member__photo" style={portraitStyle(member.name)}>
+      <Picture
+        src={member.photo}
+        alt={`${member.name} — ${member.role}`}
+        width={800}
+        widths={[320, 480, 640, 800]}
+        sizes="(min-width: 1440px) 310px, (min-width: 1024px) 23vw, (min-width: 768px) 31vw, 72vw"
+        formats={['avif']}
+        fallbackFormat="webp"
+        loading="lazy"
+        decoding="async"
+      />
+      <span class="member__tone" aria-hidden="true"></span>
+    </div>
+    <figcaption class="member__caption">
+      <span class="member__head">
+        <h3 class="member__name t-h4">{member.name}</h3>
+        <span class="member__index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+      </span>
+      <p class="member__role">{member.role}</p>
+    </figcaption>
+  </figure>
+</li>
+
+<style>
+  .member {
+    min-width: 0;
+  }
+
+  .member__figure {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    overflow: hidden;
+    isolation: isolate;
+    transition: border-color var(--dur-2) var(--ease-out);
+  }
+
+  .member__photo {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    isolation: isolate;
+    background: var(--surface);
+  }
+
+  .member__photo :global(picture) {
+    display: block;
+    height: 100%;
+  }
+
+  .member__photo :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--focus, 50% 28%);
+    filter: contrast(1.06);
+    transform: scale(var(--zoom, 1));
+    transform-origin: var(--focus, 50% 28%);
+    transition: transform var(--dur-3) var(--ease-out);
+  }
+
+  /* Neutral layer: removes ~85% of the photo's saturation, keeps its luminosity.
+     Technical constant (not a theme colour) — any zero-saturation colour works. */
+  .member__tone {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    mix-blend-mode: saturation;
+    opacity: 0.85;
+    pointer-events: none;
+    transition: opacity var(--dur-3) var(--ease-out);
+  }
+
+  .member__caption {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-4) var(--space-5);
+    border-top: 1px solid var(--line);
+  }
+
+  .member__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .member__name {
+    min-width: 0;
+  }
+
+  .member__index {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-meta);
+    color: var(--fg-faint);
+    transition: color var(--dur-2) var(--ease-out);
+  }
+
+  .member__role {
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+
+  /* ---- Active state ---------------------------------------------------------------- */
+  /* Hover only where a real hover exists, so a tap never leaves a card "stuck" highlighted. */
+  .member:is(:focus-within, .is-active) .member__figure {
+    border-color: var(--line-strong);
+  }
+
+  .member:is(:focus-within, .is-active) .member__tone {
+    opacity: 0;
+  }
+
+  .member:is(:focus-within, .is-active) .member__photo :global(img) {
+    transform: scale(calc(var(--zoom, 1) * 1.04));
+  }
+
+  .member:is(:focus-within, .is-active) .member__index {
+    color: var(--accent-text);
+  }
+
+  @media (hover: hover) {
+    .member:hover .member__figure {
+      border-color: var(--line-strong);
+    }
+
+    .member:hover .member__tone {
+      opacity: 0;
+    }
+
+    .member:hover .member__photo :global(img) {
+      transform: scale(calc(var(--zoom, 1) * 1.04));
+    }
+
+    .member:hover .member__index {
+      color: var(--accent-text);
+    }
+  }
+
+  /* Touch screens: no hover to "reveal" colour — show full-colour portraits and skip the blend
+     layer and filter entirely (both are costly to composite while scrolling on phones). */
+  @media (hover: none) {
+    .member__tone {
+      display: none;
+    }
+
+    .member__photo :global(img) {
+      filter: none;
+    }
+  }
+</style>

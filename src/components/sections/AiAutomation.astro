@@ -1,0 +1,177 @@
+---
+/**
+ * 03 — AI & Automation: animated agent flow (L3) + four capabilities
+ * (hairline cells ≥768px, a swipe carousel on phones).
+ * The flow ends in the section's CTA (preselects the "ai" service in the lead form).
+ * Behaviour: src/scripts/ai-flow.ts
+ */
+import type { Lang } from '@/i18n';
+import { anchor } from '@/i18n';
+import { ai } from '@/content/ai';
+import SectionHeading from '@/components/ui/SectionHeading.astro';
+import SnapCarousel from '@/components/ui/SnapCarousel.astro';
+import AiFlow from './ai/AiFlow.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = ai[lang];
+const pad = (n: number): string => String(n).padStart(2, '0');
+---
+
+<section id="ai" class="section has-noise has-grid" data-theme="dark" aria-labelledby="ai-title">
+  <div class="container">
+    <SectionHeading index="03" eyebrow={t.eyebrow} title={t.title} lead={t.lead} id="ai-title" />
+
+    <div class="ai__flow" data-reveal="fade" style="--i:1">
+      <AiFlow flow={t.flow} cta={t.cta} ctaHref={anchor(lang, 'contact')} />
+    </div>
+
+    <SnapCarousel
+      id="ai-caps-carousel"
+      label={t.capabilitiesCarousel.label}
+      prevLabel={t.capabilitiesCarousel.prev}
+      nextLabel={t.capabilitiesCarousel.next}
+      roledescription={t.capabilitiesCarousel.roledescription}
+      count={t.capabilities.length}
+    >
+      <ul class="caps" role="list" data-ai-caps>
+        {
+          t.capabilities.map((cap, i) => (
+            <li class="cap" data-spotlight data-reveal style={`--i:${i}`}>
+              <span class="cap__index" aria-hidden="true">
+                {pad(i + 1)}
+              </span>
+              <h3 class="cap__title t-h4">{cap.title}</h3>
+              <p class="cap__text">{cap.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </SnapCarousel>
+  </div>
+</section>
+
+<style>
+  .ai__flow {
+    margin-bottom: clamp(4rem, 2rem + 6vw, 7.5rem);
+  }
+
+  @media (max-width: 767.98px) {
+    .ai__flow {
+      margin-bottom: var(--space-7);
+    }
+  }
+
+  /* ---- Capabilities: hairline-framed cells -------------------------------- */
+  .caps {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--line);
+    border-left: 1px solid var(--line);
+  }
+
+  .cap {
+    position: relative;
+    display: grid;
+    grid-template-rows: 1fr auto auto;
+    gap: var(--space-3);
+    padding: clamp(1.5rem, 1rem + 2vw, 2.75rem);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    isolation: isolate;
+  }
+
+  /* Hover: tinted frame + soft spotlight under the pointer (L1) */
+  .cap::before,
+  .cap::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-2) var(--ease-out);
+  }
+
+  .cap::before {
+    inset: -1px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    z-index: 1;
+  }
+
+  .cap::after {
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(
+      26rem circle at var(--mx, 50%) var(--my, 0%),
+      var(--accent-soft),
+      transparent 70%
+    );
+  }
+
+  .cap__index {
+    align-self: start;
+    margin-bottom: var(--space-5);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-meta);
+    color: var(--accent-text);
+  }
+
+  .cap__title {
+    max-width: 24ch;
+  }
+
+  .cap__text {
+    max-width: 46ch;
+    color: var(--fg-muted);
+  }
+
+  @media (hover: hover) {
+    .cap:hover::before,
+    .cap:hover::after {
+      opacity: 1;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .caps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cap {
+      min-height: 15rem;
+    }
+  }
+
+  /* Phones: SnapCarousel row — each capability is a framed card of equal height. */
+  @media (max-width: 767.98px) {
+    .caps {
+      border: 0;
+    }
+
+    .cap {
+      grid-template-rows: auto auto 1fr;
+      align-content: start;
+      padding: var(--space-5);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+    }
+
+    .cap::before {
+      border-radius: inherit;
+    }
+
+    .cap__index {
+      margin-bottom: var(--space-4);
+    }
+  }
+</style>
+
+<script>
+  import '@/scripts/ai-flow';
+</script>

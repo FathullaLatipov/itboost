@@ -1,0 +1,77 @@
+---
+/**
+ * Inline stroke icons (24×24, 1.6 stroke). Decorative by default (aria-hidden).
+ * Pass `label` to make an icon meaningful for assistive tech.
+ */
+export type IconName =
+  | 'arrow-right'
+  | 'arrow-up-right'
+  | 'arrow-down'
+  | 'arrow-up'
+  | 'plus'
+  | 'minus'
+  | 'close'
+  | 'menu'
+  | 'phone'
+  | 'mail'
+  | 'map-pin'
+  | 'telegram'
+  | 'instagram'
+  | 'check'
+  | 'chevron-down'
+  | 'zoom'
+  | 'spark';
+
+interface Props {
+  name: IconName;
+  size?: number;
+  label?: string;
+  class?: string;
+}
+
+const { name, size = 20, label, class: className } = Astro.props;
+
+const paths: Record<IconName, string> = {
+  'arrow-right': '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
+  'arrow-up-right': '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>',
+  'arrow-down': '<path d="M12 5v14"/><path d="m6 13 6 6 6-6"/>',
+  'arrow-up': '<path d="M12 19V5"/><path d="m6 11 6-6 6 6"/>',
+  plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  close: '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
+  menu: '<path d="M4 8h16"/><path d="M4 16h16"/>',
+  phone:
+    '<path d="M5 4h3.5l1.8 4.4-2.2 1.4a11 11 0 0 0 6.1 6.1l1.4-2.2L20 15.5V19a1 1 0 0 1-1 1A15 15 0 0 1 4 5a1 1 0 0 1 1-1Z"/>',
+  mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="m4 7 8 6 8-6"/>',
+  'map-pin': '<path d="M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  telegram: '<path d="M21 4 3 11.2l6.3 2.3L18 7l-6.6 7.7.1 5.3 3.2-3.6 4.2 3.1L21 4Z"/>',
+  instagram: '<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r=".6" fill="currentColor"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+  zoom: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/><path d="M11 8.5v5"/><path d="M8.5 11h5"/>',
+  spark: '<path d="M12 3v4"/><path d="M12 17v4"/><path d="M3 12h4"/><path d="M17 12h4"/><path d="m6 6 2.5 2.5"/><path d="m15.5 15.5 2.5 2.5"/><path d="m18 6-2.5 2.5"/><path d="M8.5 15.5 6 18"/>',
+};
+---
+
+<svg
+  class:list={['icon', className]}
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.6"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden={label ? undefined : 'true'}
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  focusable="false"
+  set:html={paths[name]}
+/>
+
+<style>
+  .icon {
+    flex-shrink: 0;
+  }
+</style>

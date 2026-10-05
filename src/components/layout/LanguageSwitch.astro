@@ -1,0 +1,100 @@
+---
+/**
+ * Segmented RU | UZ switch. Real links to each language's home page (works without JS);
+ * header.ts progressively appends the current section anchor so switching keeps your place.
+ */
+import type { Lang } from '@/i18n';
+import { homePath, htmlLang, langLabel, languages } from '@/i18n';
+import { common } from '@/content/common';
+
+interface Props {
+  lang: Lang;
+  /** `bar` — compact (header); `panel` — touch-sized (menu, footer). */
+  size?: 'bar' | 'panel';
+  class?: string;
+}
+
+const { lang, size = 'bar', class: className } = Astro.props;
+---
+
+<div class:list={['lang-switch', `lang-switch--${size}`, className]} role="group" aria-label={common[lang].language}>
+  {
+    languages.map((l) => (
+      <a
+        class="lang-switch__link"
+        href={homePath(l)}
+        hreflang={htmlLang[l]}
+        lang={htmlLang[l]}
+        aria-current={l === lang ? 'true' : undefined}
+        data-lang-link={l}
+      >
+        <span aria-hidden="true">{langLabel[l].short}</span>
+        <span class="sr-only">{langLabel[l].full}</span>
+      </a>
+    ))
+  }
+</div>
+
+<style>
+  .lang-switch {
+    --seg-h: 36px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 3px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+  }
+
+  .lang-switch--panel {
+    --seg-h: 44px;
+  }
+
+  .lang-switch__link {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    min-width: 2.75rem;
+    height: calc(var(--seg-h) - 8px);
+    padding: 0 0.7rem;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    line-height: 1;
+    letter-spacing: var(--tracking-meta);
+    color: var(--fg-faint);
+    transition:
+      color var(--dur-1) var(--ease-out),
+      background-color var(--dur-2) var(--ease-out);
+  }
+
+  /* Expand the hit area to ≥44px tall without growing the visual. */
+  .lang-switch__link::before {
+    content: '';
+    position: absolute;
+    inset: calc((44px - (var(--seg-h) - 8px)) / -2) 0;
+  }
+
+  .lang-switch__link[aria-current='true'] {
+    background: var(--line-strong);
+    color: var(--fg);
+  }
+
+  @media (hover: hover) {
+    .lang-switch__link:not([aria-current='true']):hover {
+      color: var(--fg);
+    }
+  }
+
+  .lang-switch__link:focus-visible {
+    outline-offset: 2px;
+    border-radius: var(--radius-pill);
+  }
+
+  @media (pointer: coarse) {
+    .lang-switch {
+      --seg-h: 44px;
+    }
+  }
+</style>

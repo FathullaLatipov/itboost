@@ -1,0 +1,40 @@
+---
+/**
+ * Hero L3 visual: two stacked canvases (static lattice + per-frame FX) driven by
+ * src/scripts/hero-canvas.ts. Purely decorative, absolutely positioned (no layout shift),
+ * bleeds 16px beyond the hero so the parallax drift never exposes an edge.
+ */
+---
+
+<div class="hero-visual" data-hero-visual aria-hidden="true">
+  <canvas class="hero-visual__layer" data-hero-lattice></canvas>
+  <canvas class="hero-visual__layer" data-hero-fx></canvas>
+</div>
+
+<style>
+  .hero-visual {
+    position: absolute;
+    inset: -16px;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.6s var(--ease-out);
+    will-change: transform;
+  }
+
+  .hero-visual:global(.is-ready) {
+    opacity: 1;
+  }
+
+  .hero-visual__layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+  }
+</style>
+
+<script>
+  import '@/scripts/hero-canvas';
+</script>

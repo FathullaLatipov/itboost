@@ -1,0 +1,94 @@
+---
+/**
+ * 2px reading-progress bar pinned to the very top. Transform-only (scaleX), rAF-throttled.
+ * Decorative — hidden from assistive tech.
+ */
+---
+
+<div class="scroll-progress" aria-hidden="true">
+  <span class="scroll-progress__bar" data-scroll-progress></span>
+</div>
+
+<style>
+  .scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-progress);
+    height: 2px;
+    pointer-events: none;
+    transition: opacity var(--dur-2) var(--ease-out);
+  }
+
+  /* The page cannot scroll behind the open menu — keep the overlay clean. */
+  :global(html.is-menu-open) .scroll-progress {
+    opacity: 0;
+  }
+
+  .scroll-progress__bar {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--blue-500);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+  }
+
+  /* Scroll-driven animation: runs on the compositor, zero JS per scroll frame.
+     Browsers without support (and reduced-motion users, whose global kill-switch would break a
+     timeline-driven animation) use the rAF fallback below. */
+  @supports (animation-timeline: scroll()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .scroll-progress__bar {
+        animation: scroll-progress linear both;
+        animation-timeline: scroll(root block);
+      }
+    }
+  }
+
+  @keyframes scroll-progress {
+    to {
+      transform: scaleX(1);
+    }
+  }
+</style>
+
+<script>
+  const bar = document.querySelector<HTMLElement>('[data-scroll-progress]');
+  const cssDriven =
+    CSS.supports('animation-timeline: scroll()') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (bar && !cssDriven) {
+    let max = 1;
+    let ticking = false;
+
+    const measure = (): void => {
+      max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    };
+
+    const render = (): void => {
+      ticking = false;
+      const progress = Math.min(1, Math.max(0, window.scrollY / max));
+      bar.style.transform = `scaleX(${progress})`;
+    };
+
+    const schedule = (): void => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(render);
+    };
+
+    const remeasure = (): void => {
+      measure();
+      schedule();
+    };
+
+    measure();
+    render();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', remeasure, { passive: true });
+    // Page height changes as images load and sections expand.
+    new ResizeObserver(remeasure).observe(document.body);
+  }
+</script>

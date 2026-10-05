@@ -1,0 +1,45 @@
+---
+import { Image } from 'astro:assets';
+import logoColor from '@/assets/brand/logo-color.png';
+import type { Lang } from '@/i18n';
+import { homePath } from '@/i18n';
+
+interface Props {
+  lang: Lang;
+  /** Rendered width in CSS px. Height follows the logo aspect ratio (3188×703). */
+  width?: number;
+  class?: string;
+  /** When false, renders the image without a link (e.g. inside an existing link). */
+  link?: boolean;
+}
+
+const { lang, width = 136, class: className, link = true } = Astro.props;
+const height = Math.round((width * 703) / 3188);
+---
+
+{
+  link ? (
+    <a href={homePath(lang)} class:list={['logo', className]} aria-label="ITBoost">
+      <Image src={logoColor} alt="" width={width} height={height} densities={[1, 2]} loading="eager" decoding="async" />
+    </a>
+  ) : (
+    <span class:list={['logo', className]}>
+      <Image src={logoColor} alt="ITBoost" width={width} height={height} densities={[1, 2]} loading="eager" decoding="async" />
+    </span>
+  )
+}
+
+<style>
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    border-radius: var(--radius-xs);
+  }
+
+  .logo :global(img) {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+  }
+</style>

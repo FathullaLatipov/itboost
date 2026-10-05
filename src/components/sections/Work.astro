@@ -1,0 +1,409 @@
+---
+/**
+ * 04 · Work — featured case studies → filterable index of all projects → closing CTA.
+ * Dark section following the dark AI section (hence section--divided).
+ * Behaviour: src/scripts/work.ts (filters, parallax) and src/scripts/lightbox.ts (via Lightbox).
+ */
+import type { Lang } from '@/i18n';
+import { anchor } from '@/i18n';
+import type { ProjectCategory } from '@/content/projects';
+import { projects, workSection } from '@/content/projects';
+import SectionHeading from '@/components/ui/SectionHeading.astro';
+import Button from '@/components/ui/Button.astro';
+import BrandMark from '@/components/ui/BrandMark.astro';
+import CaseStudy from './work/CaseStudy.astro';
+import ProjectCard from './work/ProjectCard.astro';
+import Lightbox from './work/Lightbox.astro';
+import { getLightboxImage } from './work/media';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = workSection[lang];
+
+const entries = await Promise.all(
+  projects.map(async (project) => ({ project, lightbox: await getLightboxImage(project) })),
+);
+const featured = entries.filter((entry) => entry.project.featured === true);
+
+type FilterKey = 'all' | ProjectCategory;
+const filterOrder: FilterKey[] = ['all', 'web', 'shop', 'platform', 'mobile', 'bot'];
+const filters = filterOrder
+  .map((key) => ({
+    key,
+    label: t.filters[key],
+    count: key === 'all' ? projects.length : projects.filter((p) => p.category === key).length,
+  }))
+  .filter((filter) => filter.count > 0);
+---
+
+<section id="work" class="section section--divided work" data-theme="dark" aria-labelledby="work-title">
+  <div class="container">
+    <SectionHeading index="04" eyebrow={t.eyebrow} title={t.title} lead={t.lead} id="work-title" />
+
+    <ol class="work-cases" role="list">
+      {
+        featured.map((entry, i) => (
+          <li>
+            <CaseStudy
+              project={entry.project}
+              lang={lang}
+              lightbox={entry.lightbox}
+              index={i}
+              total={featured.length}
+            />
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="work-index" role="region" aria-labelledby="work-index-title">
+      <div class="work-index__head">
+        <h3 class="work-index__title" id="work-index-title" data-reveal>
+          {t.allTitle}
+          <span class="work-index__total">{projects.length}</span>
+        </h3>
+
+        <div class="work-filters" role="group" aria-label={t.labels.filterBy} data-work-filters data-reveal style="--i:1">
+          <div class="work-filters__track">
+            {
+              filters.map((filter) => (
+                <button
+                  type="button"
+                  class="work-filter"
+                  data-filter={filter.key}
+                  aria-pressed={filter.key === 'all' ? 'true' : 'false'}
+                >
+                  <span>{filter.label}</span>
+                  <span class="work-filter__count">{String(filter.count).padStart(2, '0')}</span>
+                </button>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+
+      <ul class="work-grid" role="list" data-work-grid>
+        {
+          entries.map((entry, i) => (
+            <ProjectCard project={entry.project} lang={lang} lightbox={entry.lightbox} index={i} />
+          ))
+        }
+      </ul>
+      <div class="work-more" data-work-more hidden>
+        <Button variant="secondary" icon="arrow-down" data-work-more-button data-label={t.labels.showMore}>
+          {t.labels.showMore}
+        </Button>
+      </div>
+      <p class="sr-only" aria-live="polite" data-work-status data-label={t.labels.shown}></p>
+    </div>
+
+    <div class="work-cta" data-reveal>
+      <span class="work-cta__mark" aria-hidden="true">
+        <BrandMark size={520} tone="current" />
+      </span>
+      <p class="work-cta__title">{t.cta.title}</p>
+      <Button href={anchor(lang, 'contact')} size="lg" magnetic class="work-cta__button">
+        {t.cta.button}
+      </Button>
+    </div>
+  </div>
+
+  <Lightbox lang={lang} />
+</section>
+
+<script>
+  import '@/scripts/work';
+</script>
+
+<style>
+  /* ---- Case studies --------------------------------------------------------------- */
+  .work-cases {
+    display: grid;
+    gap: clamp(4.5rem, 2rem + 7vw, 9rem);
+    padding: 0;
+    list-style: none;
+  }
+
+  /* ---- Project index ---------------------------------------------------------------- */
+  .work-index {
+    margin-top: clamp(5rem, 2.5rem + 8vw, 10rem);
+    padding-top: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+    border-top: 1px solid var(--line);
+  }
+
+  .work-index__head {
+    display: grid;
+    gap: var(--space-5);
+    margin-bottom: clamp(2rem, 1.5rem + 2vw, 3rem);
+  }
+
+  .work-index__title {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: clamp(1.75rem, 1.4rem + 1.6vw, 2.75rem);
+    line-height: 1.05;
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .work-index__total {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-regular);
+    letter-spacing: var(--tracking-meta);
+    line-height: 1;
+    color: var(--accent-text);
+    padding-top: 0.35em;
+  }
+
+  /* Filters: horizontally scrollable row on small screens (bleeds to the gutters) */
+  .work-filters {
+    margin-inline: calc(var(--gutter) * -1);
+    padding: 6px var(--gutter);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-padding-inline: var(--gutter);
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 calc(var(--gutter) * 0.6),
+      #000 calc(100% - 2.5rem),
+      transparent 100%
+    );
+  }
+
+  .work-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .work-filters__track {
+    display: flex;
+    gap: var(--space-2);
+    width: max-content;
+  }
+
+  .work-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 44px;
+    padding: 0 1.1rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+    color: var(--fg-muted);
+    font-size: var(--text-small);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+    transition:
+      background-color var(--dur-2) var(--ease-out),
+      border-color var(--dur-2) var(--ease-out),
+      color var(--dur-2) var(--ease-out);
+  }
+
+  .work-filter__count {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: var(--weight-regular);
+    letter-spacing: 0.04em;
+    color: var(--fg-faint);
+    transition: color var(--dur-2) var(--ease-out);
+  }
+
+  .work-filter:focus-visible {
+    border-radius: var(--radius-pill);
+  }
+
+  .work-filter[aria-pressed='true'] {
+    background: var(--fg);
+    border-color: var(--fg);
+    color: var(--bg);
+  }
+
+  .work-filter[aria-pressed='true'] .work-filter__count {
+    color: var(--accent-text);
+    color: color-mix(in srgb, var(--bg) 65%, var(--accent));
+  }
+
+  @media (hover: hover) {
+    .work-filter:not([aria-pressed='true']):hover {
+      border-color: var(--accent);
+      color: var(--fg);
+    }
+  }
+
+  /* ≥1024: filters wrap freely under the title; ≥1280: title and filters share one row */
+  @media (min-width: 1024px) {
+    .work-filters {
+      margin-inline: -8px;
+      padding-inline: 8px;
+      overflow: visible;
+      mask-image: none;
+    }
+
+    .work-filters__track {
+      width: auto;
+      flex-wrap: wrap;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .work-index__head {
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: end;
+      gap: var(--space-7);
+    }
+
+    .work-filters__track {
+      justify-content: flex-end;
+    }
+  }
+
+  /* Grid: 1 → 2 (≥640) → 3 (≥1024) columns */
+  .work-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: var(--gutter);
+    row-gap: clamp(2.25rem, 1.5rem + 2vw, 3.5rem);
+    transition: opacity var(--dur-1) var(--ease-out);
+  }
+
+  .work-grid.is-filtering {
+    opacity: 0;
+  }
+
+  @media (min-width: 640px) {
+    .work-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .work-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* Phones (single column): first cards of the current filter only, the rest behind
+     "show more" (work.ts marks them [data-overflow]). Without JS every card is shown. */
+  .work-more {
+    display: none;
+    justify-content: center;
+    margin-top: var(--space-7);
+  }
+
+  @media (max-width: 639px) {
+    .work-grid.is-collapsed > :global([data-overflow]) {
+      display: none;
+    }
+
+    .work-more:not([hidden]) {
+      display: flex;
+    }
+  }
+
+  /* View-transition timing for filtered cards (ignored by browsers without VT classes) */
+  :global(::view-transition-group(.pcard)) {
+    animation-duration: 460ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  :global(::view-transition-old(.pcard)),
+  :global(::view-transition-new(.pcard)) {
+    animation-duration: 280ms;
+  }
+
+  /* ---- Closing CTA band ------------------------------------------------------------- */
+  .work-cta {
+    position: relative;
+    display: grid;
+    gap: var(--space-6);
+    justify-items: start;
+    margin-top: clamp(4.5rem, 2rem + 7vw, 8rem);
+    padding: clamp(2rem, 1.2rem + 4vw, 4.5rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .work-cta__mark {
+    position: absolute;
+    z-index: -1;
+    right: -6%;
+    top: 50%;
+    width: min(520px, 70%);
+    color: var(--accent-soft);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .work-cta__mark :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+
+  .work-cta__title {
+    max-width: 18ch;
+    font-size: clamp(1.75rem, 1.3rem + 2.2vw, 3.25rem);
+    font-weight: var(--weight-semibold);
+    line-height: 1.05;
+    letter-spacing: var(--tracking-heading);
+    text-wrap: balance;
+  }
+
+  @media (max-width: 479px) {
+    .work-cta {
+      padding: var(--space-6) var(--space-5);
+    }
+
+    .work-cta :global(.work-cta__button) {
+      --btn-px: 1.1rem;
+      width: 100%;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .work-cta {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+    }
+  }
+
+  /* Phones: tighter rhythm between the stacked blocks. */
+  @media (max-width: 767.98px) {
+    .work-cases {
+      gap: var(--space-8);
+    }
+
+    .work-index {
+      margin-top: var(--space-8);
+      padding-top: var(--space-6);
+    }
+
+    .work-index__head {
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+    }
+
+    .work-cta {
+      margin-top: var(--space-8);
+    }
+  }
+
+  /* Single column: the cards are compact list rows (see ProjectCard), separated by hairlines. */
+  @media (max-width: 639.98px) {
+    .work-grid {
+      row-gap: 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .work-more {
+      margin-top: var(--space-5);
+    }
+  }
+</style>

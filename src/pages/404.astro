@@ -1,0 +1,140 @@
+---
+/**
+ * 404 — served by Apache via `ErrorDocument 404 /404.html` (public/.htaccess).
+ * Russian page (default locale) with an Uzbek line and a link to each home page.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Header from '@/components/layout/Header.astro';
+import Footer from '@/components/layout/Footer.astro';
+import Button from '@/components/ui/Button.astro';
+import BrandMark from '@/components/ui/BrandMark.astro';
+import { common } from '@/content/common';
+import { homePath } from '@/i18n';
+
+const ru = common.ru.notFound;
+const uz = common.uz.notFound;
+---
+
+<BaseLayout lang="ru" title={`${ru.title} — ITBoost`} description={ru.text} noindex>
+  <Header lang="ru" />
+  <main id="main" tabindex="-1">
+    <section class="section has-noise not-found" data-theme="dark" aria-labelledby="not-found-title">
+      <div class="not-found__mark" aria-hidden="true">
+        <BrandMark tone="current" size={1200} />
+      </div>
+
+      <div class="container not-found__inner">
+        <p class="t-meta not-found__code" data-reveal="fade">
+          <span class="not-found__num">404</span>
+          <span class="not-found__rule" aria-hidden="true"></span>
+          <span>Not found</span>
+        </p>
+
+        <h1 class="not-found__title" id="not-found-title" data-reveal style="--i:1">{ru.title}</h1>
+        <p class="t-lead not-found__text" data-reveal style="--i:2">{ru.text}</p>
+
+        <div class="not-found__uz" lang="uz" data-reveal style="--i:3">
+          <p class="not-found__uz-title">{uz.title}</p>
+          <p class="not-found__uz-text">{uz.text}</p>
+        </div>
+
+        <div class="not-found__actions" data-reveal style="--i:4">
+          <Button href={homePath('ru')} size="lg" magnetic>{ru.cta}</Button>
+          <Button href={homePath('uz')} variant="secondary" size="lg" lang="uz" hreflang="uz">{uz.cta}</Button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <Footer lang="ru" />
+</BaseLayout>
+
+<style>
+  .not-found {
+    display: grid;
+    align-items: center;
+    min-height: 100svh;
+    padding-top: calc(var(--header-h) + var(--section-y) * 0.6);
+    overflow: hidden;
+  }
+
+  .not-found__mark {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    z-index: -1;
+    width: min(118vw, 1200px);
+    color: var(--accent);
+    opacity: 0.05;
+    transform: translate(-50%, -46%);
+    pointer-events: none;
+  }
+
+  .not-found__mark :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+
+  .not-found__inner {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-5);
+    text-align: center;
+  }
+
+  .not-found__code {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .not-found__num {
+    color: var(--accent-text);
+  }
+
+  .not-found__rule {
+    width: 2.5rem;
+    height: 1px;
+    background: var(--line-strong);
+  }
+
+  .not-found__title {
+    max-width: 14ch;
+    font-size: var(--text-display);
+    line-height: var(--leading-display);
+    letter-spacing: var(--tracking-display);
+  }
+
+  .not-found__text {
+    max-width: 36rem;
+  }
+
+  .not-found__uz {
+    display: grid;
+    gap: var(--space-1);
+    max-width: 36rem;
+    margin-top: var(--space-2);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--line);
+    color: var(--fg-muted);
+    font-size: var(--text-small);
+  }
+
+  .not-found__uz-title {
+    color: var(--fg);
+    font-weight: var(--weight-medium);
+  }
+
+  .not-found__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+
+  @media (max-width: 479px) {
+    .not-found__actions {
+      display: grid;
+      width: 100%;
+    }
+  }
+</style>

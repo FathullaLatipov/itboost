@@ -1,0 +1,64 @@
+---
+import '@fontsource-variable/onest';
+import onestLatin from '@fontsource-variable/onest/files/onest-latin-wght-normal.woff2?url';
+import onestCyrillic from '@fontsource-variable/onest/files/onest-cyrillic-wght-normal.woff2?url';
+import '@/styles/tokens.css';
+import '@/styles/base.css';
+
+import type { Lang } from '@/i18n';
+import { homePath, htmlLang, languages, ogLocale } from '@/i18n';
+import { common } from '@/content/common';
+import Seo from '@/components/layout/Seo.astro';
+
+interface Props {
+  lang: Lang;
+  title?: string;
+  description?: string;
+  /** Path of this page without language prefix, e.g. "/" — used for canonical + hreflang. */
+  path?: string;
+  noindex?: boolean;
+}
+
+const { lang, title, description, path = '/', noindex = false } = Astro.props;
+const t = common[lang];
+const pageTitle = title ?? t.meta.title;
+const pageDescription = description ?? t.meta.description;
+const site = Astro.site ?? new URL('https://itboost.uz');
+
+// Preload only the subsets the first screen needs: Cyrillic for RU, Latin for both (UI labels, names).
+const preloadFonts = lang === 'ru' ? [onestCyrillic, onestLatin] : [onestLatin];
+
+const localizedUrl = (l: Lang): string => new URL(homePath(l).replace(/\/$/, '') + path, site).href;
+const canonical = localizedUrl(lang);
+const alternates = languages.map((l) => ({ lang: htmlLang[l], href: localizedUrl(l) }));
+---
+
+<!doctype html>
+<html lang={htmlLang[lang]} data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
+    {preloadFonts.map((href) => <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />)}
+    <Seo
+      lang={lang}
+      title={pageTitle}
+      description={pageDescription}
+      canonical={canonical}
+      alternates={alternates}
+      xDefault={localizedUrl('ru')}
+      ogLocale={ogLocale[lang]}
+      noindex={noindex}
+    />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">{t.skipLink}</a>
+    <slot />
+    <script>
+      import '@/scripts/reveal';
+    </script>
+  </body>
+</html>

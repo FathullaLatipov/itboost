@@ -1,0 +1,348 @@
+---
+/**
+ * SnapCarousel — turns a list the parent owns into a native-feeling horizontal swipe list on
+ * small screens, and does nothing above the breakpoint.
+ *
+ * Usage (the parent keeps its own <ul>/<ol>, class names and scoped styles):
+ *   <SnapCarousel id="team-carousel" label="Участники команды" prevLabel="…" nextLabel="…" count={8}>
+ *     <ul class="team-grid" role="list">…<li>…</li>…</ul>
+ *   </SnapCarousel>
+ *
+ * Below `breakpoint` (CSS only, works without JS):
+ * - the list becomes a scroll-snap row (`x mandatory`) that bleeds to the screen edges, with
+ *   `scroll-padding-inline` = gutter (+ safe-area insets): the first slide lines up with the
+ *   content column and the next one peeks in. Scrollbar hidden.
+ * - slides are `--snap-slide` wide (default ≈ 82vw, clamped); the gap is the gutter.
+ * With JS (src/scripts/snap-carousel.ts) a footer appears: mono counter "01 / 08", a thin progress
+ * track and prev/next buttons. The active slide is tracked with an IntersectionObserver rooted in
+ * the scroller (no scroll listeners).
+ *
+ * Above `breakpoint` both wrappers are `display: contents` and the footer is hidden, so the
+ * parent's grid (even a subgrid) lays the list out exactly as if the carousel were not there.
+ *
+ * Parents style their slides for carousel mode with the same media query, e.g.
+ * `@media (max-width: 767.98px) { .card { … } }`.
+ */
+import Icon from './Icon.astro';
+
+/** Breakpoints the carousel styles are generated for (viewport width, px). */
+export type SnapBreakpoint = 640 | 768 | 1024;
+
+interface Props {
+  /** Accessible name of the carousel region. */
+  label: string;
+  /** aria-label of the "previous slide" button. */
+  prevLabel: string;
+  /** aria-label of the "next slide" button. */
+  nextLabel: string;
+  /** Localised aria-roledescription of the scroller (e.g. "карусель"). */
+  roledescription?: string;
+  /** Number of slides — lets the counter render its final width on the server. */
+  count?: number;
+  /** Below this viewport width the list becomes a carousel. */
+  breakpoint?: SnapBreakpoint;
+  /** CSS width of one slide on phones, e.g. "clamp(14rem, 72vw, 20rem)". */
+  slideWidth?: string;
+  /** Unique id of the scroller (referenced by the buttons' aria-controls). */
+  id: string;
+  class?: string;
+}
+
+const {
+  label,
+  prevLabel,
+  nextLabel,
+  roledescription = 'carousel',
+  count,
+  breakpoint = 768,
+  slideWidth,
+  id,
+  class: className,
+} = Astro.props;
+
+const pad = (n: number): string => String(n).padStart(2, '0');
+const style = slideWidth ? `--snap-slide:${slideWidth}` : undefined;
+---
+
+<div class:list={['snap', `snap--${breakpoint}`, className]} data-snap data-breakpoint={breakpoint} style={style}>
+  <div
+    class="snap__viewport"
+    id={id}
+    role="region"
+    aria-roledescription={roledescription}
+    aria-label={label}
+    tabindex="0"
+    data-snap-viewport
+    data-label={label}
+    data-roledescription={roledescription}
+  >
+    <slot />
+  </div>
+
+  <div class="snap__footer" data-snap-footer>
+    <p class="snap__counter" aria-hidden="true">
+      <span class="snap__current" data-snap-current>01</span>
+      <span class="snap__sep">/</span>
+      <span data-snap-total>{count ? pad(count) : '00'}</span>
+    </p>
+    <span class="snap__progress" aria-hidden="true">
+      <span class="snap__fill" data-snap-fill style={count ? `--snap-progress:${1 / count}` : undefined}></span>
+    </span>
+    <div class="snap__nav">
+      <button
+        type="button"
+        class="snap__btn snap__btn--prev"
+        aria-label={prevLabel}
+        aria-controls={id}
+        aria-disabled="true"
+        data-snap-prev
+      >
+        <Icon name="arrow-right" size={18} />
+      </button>
+      <button type="button" class="snap__btn" aria-label={nextLabel} aria-controls={id} data-snap-next>
+        <Icon name="arrow-right" size={18} />
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .snap {
+    /* Distance from the screen edge to the content column — same as .container's padding. */
+    --snap-edge-start: max(var(--gutter), env(safe-area-inset-left));
+    --snap-edge-end: max(var(--gutter), env(safe-area-inset-right));
+    --snap-gap: var(--gutter);
+    --snap-slide: clamp(15rem, 82vw, 22rem);
+  }
+
+  /* ---- Off (above the breakpoint): the wrappers do not generate boxes ------------------ */
+  .snap,
+  .snap__viewport {
+    display: contents;
+  }
+
+  .snap__footer {
+    display: none;
+  }
+
+  /* ---- Carousel mode ------------------------------------------------------------------ */
+  /* Mode-independent properties: harmless while the wrappers are display: contents. */
+  .snap__viewport {
+    position: relative;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--snap-edge-start) var(--snap-edge-end);
+    scrollbar-width: none;
+  }
+
+  .snap__viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The viewport bleeds to the screen edges, so its focus ring is drawn inside it. */
+  .snap__viewport:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+    border-radius: 0;
+  }
+
+  .snap__viewport > :global(*) > :global(*) {
+    scroll-snap-align: start;
+  }
+
+  /* One block per supported breakpoint (custom properties cannot be used in media queries). */
+  @media (max-width: 639.98px) {
+    .snap--640 {
+      display: block;
+      /* never let the row's max-content width widen a grid / flex parent */
+      min-width: 0;
+    }
+
+    .snap--640 .snap__viewport {
+      display: block;
+      overflow-x: auto;
+      overflow-y: hidden;
+      /* room for focus rings and the reveal rise inside the clipped scroller */
+      margin-block: -8px;
+      padding-block: 8px;
+      margin-inline: calc(var(--snap-edge-start) * -1) calc(var(--snap-edge-end) * -1);
+    }
+
+    .snap--640 .snap__viewport > :global(*) {
+      display: flex;
+      width: max-content;
+      min-width: 100%;
+      gap: var(--snap-gap);
+      margin: 0;
+      padding-inline: var(--snap-edge-start) var(--snap-edge-end);
+    }
+
+    .snap--640 .snap__viewport > :global(*) > :global(*) {
+      flex: 0 0 var(--snap-slide);
+      width: var(--snap-slide);
+      min-width: 0;
+    }
+
+    :global(.js) .snap--640:not(.is-static) .snap__footer {
+      display: flex;
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    .snap--768 {
+      display: block;
+      /* never let the row's max-content width widen a grid / flex parent */
+      min-width: 0;
+    }
+
+    .snap--768 .snap__viewport {
+      display: block;
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin-block: -8px;
+      padding-block: 8px;
+      margin-inline: calc(var(--snap-edge-start) * -1) calc(var(--snap-edge-end) * -1);
+    }
+
+    .snap--768 .snap__viewport > :global(*) {
+      display: flex;
+      width: max-content;
+      min-width: 100%;
+      gap: var(--snap-gap);
+      margin: 0;
+      padding-inline: var(--snap-edge-start) var(--snap-edge-end);
+    }
+
+    .snap--768 .snap__viewport > :global(*) > :global(*) {
+      flex: 0 0 var(--snap-slide);
+      width: var(--snap-slide);
+      min-width: 0;
+    }
+
+    :global(.js) .snap--768:not(.is-static) .snap__footer {
+      display: flex;
+    }
+  }
+
+  @media (max-width: 1023.98px) {
+    .snap--1024 {
+      display: block;
+      /* never let the row's max-content width widen a grid / flex parent */
+      min-width: 0;
+    }
+
+    .snap--1024 .snap__viewport {
+      display: block;
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin-block: -8px;
+      padding-block: 8px;
+      margin-inline: calc(var(--snap-edge-start) * -1) calc(var(--snap-edge-end) * -1);
+    }
+
+    .snap--1024 .snap__viewport > :global(*) {
+      display: flex;
+      width: max-content;
+      min-width: 100%;
+      gap: var(--snap-gap);
+      margin: 0;
+      padding-inline: var(--snap-edge-start) var(--snap-edge-end);
+    }
+
+    .snap--1024 .snap__viewport > :global(*) > :global(*) {
+      flex: 0 0 var(--snap-slide);
+      width: var(--snap-slide);
+      min-width: 0;
+    }
+
+    :global(.js) .snap--1024:not(.is-static) .snap__footer {
+      display: flex;
+    }
+  }
+
+  /* ---- Footer: counter · progress · prev/next ------------------------------------------ */
+  .snap__footer {
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+  }
+
+  .snap__counter {
+    display: inline-flex;
+    gap: 0.45em;
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    line-height: 1;
+    letter-spacing: var(--tracking-meta);
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-faint);
+  }
+
+  .snap__current {
+    color: var(--accent-text);
+  }
+
+  .snap__progress {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 2rem;
+    height: 1px;
+    background: var(--line-strong);
+  }
+
+  .snap__fill {
+    position: absolute;
+    inset: -0.5px 0;
+    background: var(--accent);
+    transform-origin: left center;
+    transform: scaleX(var(--snap-progress, 0));
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+
+  .snap__nav {
+    display: flex;
+    flex: none;
+    gap: var(--space-2);
+  }
+
+  .snap__btn {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    color: var(--fg);
+    transition:
+      border-color var(--dur-1) var(--ease-out),
+      background-color var(--dur-1) var(--ease-out),
+      color var(--dur-1) var(--ease-out),
+      opacity var(--dur-1) var(--ease-out);
+  }
+
+  .snap__btn--prev :global(svg) {
+    transform: scaleX(-1);
+  }
+
+  .snap__btn[aria-disabled='true'] {
+    opacity: 0.38;
+    cursor: default;
+  }
+
+  .snap__btn:focus-visible {
+    border-radius: 50%;
+  }
+
+  @media (hover: hover) {
+    .snap__btn:not([aria-disabled='true']):hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-text);
+    }
+  }
+</style>
+
+<script>
+  import '@/scripts/snap-carousel';
+</script>

@@ -1,0 +1,53 @@
+---
+/**
+ * Editorial statement whose words "light up" as the reader scrolls through it (src/scripts/about.ts).
+ * Words are plain spans inside one paragraph, so assistive tech reads a normal sentence.
+ * Without JS or with reduced motion the text is simply fully lit.
+ */
+interface Props {
+  text: string;
+  /** Words containing this string get the accent (e.g. the brand name). */
+  highlight?: string;
+  class?: string;
+}
+
+const { text, highlight, class: className } = Astro.props;
+const words = text.split(/\s+/).filter(Boolean);
+---
+
+<p class:list={['statement', className]} data-statement style={`--n:${words.length}`}>
+  {
+    words.map((word, i) => (
+      <>
+        <span
+          class:list={['statement__w', { 'statement__w--accent': highlight !== undefined && word.includes(highlight) }]}
+          style={`--k:${i}`}
+        >
+          {word}
+        </span>{' '}
+      </>
+    ))
+  }
+</p>
+
+<style>
+  .statement {
+    font-size: clamp(1.6rem, 1rem + 2.6vw, 3.4rem);
+    font-weight: var(--weight-medium);
+    line-height: 1.16;
+    letter-spacing: -0.032em;
+    color: var(--fg);
+    text-wrap: pretty;
+  }
+
+  .statement__w--accent {
+    color: var(--accent-text);
+  }
+
+  /* Scroll-linked lighting: --lit (set by about.ts) sweeps from 0 to n + 3 words.
+     Floor of 0.5 keeps unlit words ≥ 3:1 against paper (large-text AA); the brand word stays lit. */
+  .statement:global(.is-scrub) .statement__w:not(.statement__w--accent) {
+    opacity: clamp(0.5, (var(--lit, 0) - var(--k)) / 3, 1);
+    transition: opacity 0.24s linear;
+  }
+</style>

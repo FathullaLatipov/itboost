@@ -1,0 +1,47 @@
+---
+interface Props {
+  variant?: 'outline' | 'soft' | 'mono';
+  class?: string;
+}
+
+const { variant = 'outline', class: className } = Astro.props;
+---
+
+<span class:list={['badge', `badge--${variant}`, className]}><slot /></span>
+
+<style>
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 28px;
+    padding: 0.25rem 0.7rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-small);
+    line-height: 1.2;
+    white-space: nowrap;
+    transition:
+      border-color var(--dur-1) var(--ease-out),
+      background-color var(--dur-1) var(--ease-out),
+      color var(--dur-1) var(--ease-out);
+  }
+
+  .badge--outline {
+    border: 1px solid var(--line-strong);
+    color: var(--fg-muted);
+  }
+
+  .badge--soft {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+
+  .badge--mono {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    border: 1px solid var(--line);
+    color: var(--fg-faint);
+  }
+</style>
