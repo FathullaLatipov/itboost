@@ -5,8 +5,9 @@
  *   telegram (default) — POST to the Telegram Bot API straight from the browser, as the legacy
  *                        site did. The body is URLSearchParams → a CORS "simple request" (no
  *                        preflight) and no personal data ends up in the URL / server logs.
- *   proxy              — POST JSON to PUBLIC_LEAD_ENDPOINT (public/api/lead.php), which keeps
- *                        the bot token on the server.
+ *   proxy              — POST JSON to PUBLIC_LEAD_ENDPOINT (default /api/lead), which keeps the
+ *                        bot token on the server: api/lead.js (Vercel Function) or, on cPanel,
+ *                        public/api/lead.php (reached via the /api/lead rewrite in .htaccess).
  *
  * Every outcome is a typed LeadResult; failures are also logged with console.error.
  */
@@ -45,7 +46,7 @@ type LeadConfig =
   | { mode: 'proxy'; endpoint: string };
 
 const TIMEOUT_MS = 12_000;
-const DEFAULT_ENDPOINT = '/api/lead.php';
+const DEFAULT_ENDPOINT = '/api/lead';
 
 /* ---- Config ---------------------------------------------------------------- */
 
@@ -77,7 +78,7 @@ export function isLeadConfigured(): boolean {
 
 /* ---- Message ------------------------------------------------------------- */
 
-/** Legacy Telegram message format + language and page. Keep in sync with public/api/lead.php. */
+/** Legacy Telegram message format + language and page. Keep in sync with api/lead.js and public/api/lead.php. */
 export function formatLeadMessage(payload: LeadPayload): string {
   return [
     `Имя: ${payload.name}`,
